@@ -98,7 +98,7 @@ jobs:
       - name: Package tests
         shell: bash
         working-directory: package
-        run: aux4 test run test/aaa_diag.test.md || true
+        run: aux4 test run test
 
       - name: Conformance (aux4/computer)
         shell: bash
