@@ -81,10 +81,6 @@ jobs:
           mkdir -p "$HOME/.aux4.config/packages" && unzip -o -q "$RUNNER_TEMP/aux4.zip" -d "$HOME/.aux4.config/packages"
           cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
 
-      - name: Install jest
-        shell: bash
-        run: npm i -g jest
-
       - name: Load aux4/test and aux4/computer
         shell: bash
         run: aux4 ci windows-packages
@@ -140,10 +136,6 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_${{ matrix.arch }}_aux4_aux4_${TAG#v}.zip"
           mkdir -p "$HOME/.aux4.config/packages" && unzip -o -q "$RUNNER_TEMP/aux4.zip" -d "$HOME/.aux4.config/packages"
           cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
-
-      - name: Install jest
-        shell: bash
-        run: npm i -g jest
 
       - name: Load aux4/test and aux4/computer
         shell: bash

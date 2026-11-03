@@ -82,12 +82,13 @@
             "unzip -o -q \"$RUNNER_TEMP/aux4-computer.zip\" -d \"$HOME/.aux4.config/packages\"",
             "aux4 ci quote-package-dir --file \"$HOME/.aux4.config/packages/aux4/test/.aux4\"",
             "aux4 ci quote-package-dir --file \"$HOME/.aux4.config/packages/aux4/computer/.aux4\"",
-            "sed -i \"s#e.spawn(\\\"jest\\\",\\[#e.spawn(process.execPath,[\\\"$(cygpath -m \"$(npm root -g)\")/jest/bin/jest.js\\\",#\" \"$HOME/.aux4.config/packages/aux4/test/lib/aux4-test.js\"",
+            "sed -i 's#e.spawn(\"jest\",\\[#e.spawn(process.execPath,[n.resolve(l,\"node_modules\",\"jest\",\"bin\",\"jest.js\"),#' \"$HOME/.aux4.config/packages/aux4/test/lib/aux4-test.js\"",
+            "grep -c \"process.execPath,\\[n.resolve(l\" \"$HOME/.aux4.config/packages/aux4/test/lib/aux4-test.js\"",
             "echo \"AUX4_AUX4_FILES=$(cygpath -w \"$HOME/.aux4.config/packages/aux4/test/.aux4\");$(cygpath -w \"$HOME/.aux4.config/packages/aux4/computer/.aux4\")\" >> \"$GITHUB_ENV\"",
             "jq -r \".name + \\\" \\\" + .version\" \"$HOME/.aux4.config/packages/aux4/test/.aux4\" \"$HOME/.aux4.config/packages/aux4/computer/.aux4\""
           ],
           "help": {
-            "text": "Load aux4/test and aux4/computer on a Windows runner without pkger (it can't install itself on Windows yet): download the hub's Windows zips, quote ${packageDir} in their command lines (aux4 injects it with backslashes), run jest through node, and export AUX4_AUX4_FILES",
+            "text": "Load aux4/test and aux4/computer on a Windows runner without pkger (it can't install itself on Windows yet): download the hub's Windows zips, quote ${packageDir} in their command lines (aux4 injects it with backslashes), run its bundled jest through node (it spawns `jest` without a shell, which can't start npm's jest.cmd), and export AUX4_AUX4_FILES",
             "variables": [
               {
                 "name": "computerHub",
