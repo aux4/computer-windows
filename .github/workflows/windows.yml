@@ -62,6 +62,8 @@ jobs:
     env:
       # aux4/test runs each test's command line through child_process.exec, which uses ComSpec.
       ComSpec: C:\Program Files\Git\bin\bash.exe
+      # Keep ~/.aux4.config on the checkout's drive (D:): jest can't resolve its runner across drives.
+      HOME: D:\a\_temp\home
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -119,6 +121,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       ComSpec: C:\Program Files\Git\bin\bash.exe
+      HOME: D:\a\_temp\home
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
