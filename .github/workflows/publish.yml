@@ -1,0 +1,152 @@
+name: Publish Package
+
+# main -> prod hub (token minted from AUX4_PUBLISHER_* client credentials against prod SSO)
+# dev  -> dev hub  (token minted from AUX4_DEV_PUBLISHER_* client credentials against dev SSO,
+#         registry pointed at the dev hub). Both call aux4/action@v1 command:publish.
+# The binaries are built and tested on Windows (windows.yml); aux4/action's publish step runs in
+# Docker, which only Linux runners have, so the publish job downloads the tested binaries.
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!README.md'
+      - '!LICENSE'
+      - '!.gitignore'
+
+  workflow_dispatch:
+    inputs:
+      level:
+        description: 'Release level (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: publish-package-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Lint
+        uses: aux4/action@v1
+        with:
+          command: lint
+          strict: 'true'
+
+  windows:
+    needs: [lint]
+    uses: ./.github/workflows/windows.yml
+
+  publish:
+    needs: [windows]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.publish.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: package/dist
+
+      - name: Mint prod hub publish token
+        id: mint
+        if: github.ref_name == 'main'
+        env:
+          CLIENT_ID: ${{ secrets.AUX4_PUBLISHER_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AUX4_PUBLISHER_CLIENT_SECRET }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then echo "::error::publisher client id/secret not set"; exit 1; fi
+          TOK=$(curl -sf -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials https://sso.aux4.io/token | jq -r '.access_token // empty')
+          if [ -z "$TOK" ]; then echo "::error::client_credentials mint returned no access_token"; exit 1; fi
+          echo "::add-mask::$TOK"; echo "token=$TOK" >> "$GITHUB_OUTPUT"
+
+      - name: Mint dev hub publish token
+        id: devmint
+        if: github.ref_name == 'dev'
+        env:
+          CLIENT_ID: ${{ secrets.AUX4_DEV_PUBLISHER_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AUX4_DEV_PUBLISHER_CLIENT_SECRET }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then echo "::error::dev publisher client id/secret not set"; exit 1; fi
+          TOK=$(curl -sf -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials https://dev.sso.aux4.io/token | jq -r '.access_token // empty')
+          if [ -z "$TOK" ]; then echo "::error::client_credentials mint returned no access_token from dev SSO"; exit 1; fi
+          echo "::add-mask::$TOK"; echo "token=$TOK" >> "$GITHUB_OUTPUT"
+
+      - name: Publish package
+        id: publish
+        uses: aux4/action@v1
+        with:
+          command: publish
+          level: ${{ inputs.level || 'patch' }}
+          aux4_token: ${{ github.ref_name == 'dev' && steps.devmint.outputs.token || steps.mint.outputs.token }}
+          registry: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || '' }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # The published package installs from the hub it went to and runs on Windows.
+  verify-install:
+    needs: [publish]
+    runs-on: windows-latest
+    env:
+      # aux4 runs command lines with $SHELL (default /bin/sh, which doesn't exist on Windows)
+      SHELL: bash
+    steps:
+      - name: Install aux4 and pkger
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=$(basename "$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/aux4/aux4/releases/latest)")
+          TMP=$(mktemp -d)
+          curl -fsSL -o "$TMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_amd64_aux4_aux4_${TAG#v}.zip"
+          mkdir -p "$HOME/.aux4.config/packages"
+          unzip -o -q "$TMP/aux4.zip" -d "$HOME/.aux4.config/packages"
+          BIN="$HOME/.aux4.config/packages/aux4/aux4"
+          export PATH="$BIN:$PATH"
+          cygpath -w "$BIN" >> "$GITHUB_PATH"
+          curl -fsSL -H "User-Agent: $(aux4 aux4 version --system)" -o "$TMP/pkger.zip" "https://api.hub.aux4.io/v1/packages/public/aux4/pkger/latest?download=true"
+          mkdir -p "$TMP/pkger"
+          unzip -o -q "$TMP/pkger.zip" -d "$TMP/pkger"
+          "$TMP/pkger/aux4/pkger/aux4-pkger.exe" install public "$TMP/pkger.zip"
+
+      - name: Install the published package
+        shell: bash
+        env:
+          AUX4_REGISTRY_URL: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || '' }}
+        run: |
+          set -euo pipefail
+          [ -n "$AUX4_REGISTRY_URL" ] || unset AUX4_REGISTRY_URL
+          aux4 aux4 pkger install "aux4/computer-windows@${{ needs.publish.outputs.version }}"
+          aux4 aux4 pkger list | grep computer
+
+      - name: Run it
+        shell: bash
+        run: |
+          set -euo pipefail
+          aux4 computer win info | tee info.json | jq -c '{provider, contract, platform, version}'
+          jq -e '.provider == "win" and .contract == 1 and .version == "${{ needs.publish.outputs.version }}"' info.json > /dev/null
+          aux4 computer providers | jq -c .
+          aux4 computer win open notepad --wait 15s | jq -c '{app, mode, window: .window.title}'
+          aux4 computer win type "installed from the hub" --app notepad | jq -e '.mode == "background"'
+          aux4 computer win wait --app notepad --text "installed from the hub" --source ax --timeout 5s | jq -c '{source, waited}'
+          aux4 computer win quit notepad --force true | jq -c '{terminated}'

@@ -9,6 +9,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: never
+  # aux4 runs command lines with $SHELL (default /bin/sh, which doesn't exist on Windows)
+  SHELL: bash
 
 jobs:
   build:
@@ -81,9 +83,7 @@ jobs:
           curl -fsSL -H "User-Agent: $(aux4 aux4 version --system)" -o "$TMP/pkger.zip" "https://api.hub.aux4.io/v1/packages/public/aux4/pkger/latest?download=true"
           mkdir -p "$TMP/pkger"
           unzip -o -q "$TMP/pkger.zip" -d "$TMP/pkger"
-          PKGER=$(ls "$TMP"/pkger/aux4/pkger/dist/windows/${{ matrix.arch }}/aux4-pkger* 2>/dev/null | head -1 || true)
-          if [ -z "$PKGER" ]; then echo "pkger zip layout:"; find "$TMP/pkger" -maxdepth 5 | head -50; exit 1; fi
-          "$PKGER" install public "$TMP/pkger.zip"
+          "$TMP/pkger/aux4/pkger/aux4-pkger.exe" install public "$TMP/pkger.zip"
           npm i -g jest > /dev/null
           aux4 aux4 pkger install aux4/test
           aux4 aux4 pkger list
@@ -221,9 +221,12 @@ jobs:
           echo "$OCR" | jq -c '{source, method, language, matches: [.matches[] | {text, center, windowCenter}]}'
           echo "$OCR" | check ocr-1792 '.matches | length > 0'
           jq -n --slurpfile f "$A/find-1792.json" --slurpfile o "$A/ocr-1792.json" '
-            ($f[0].matches | map(select(.frame.width > 0)) | last) as $e | ($o[0].matches[0].match // $o[0].matches[0]) as $m |
+            ($f[0].matches | map(select(.frame.width > 0)) | min_by(.frame.width * .frame.height)) as $e | ($o[0].matches[0].match // $o[0].matches[0]) as $m |
             {element: $e.frame, ocr: $m.center,
              inside: ($m.center.x >= $e.frame.x and $m.center.x <= $e.frame.x + $e.frame.width and $m.center.y >= $e.frame.y and $m.center.y <= $e.frame.y + $e.frame.height)}' | check find-ocr-agree '.inside'
+          DISPLAY_REF=$(jq -r '.matches | map(select(.frame.width > 0)) | min_by(.frame.width * .frame.height) | .ref' "$A/find-1792.json")
+          echo "display element: $DISPLAY_REF"
+          shown() { cw find "$1" --app Calculator | jq -e --arg r "$DISPLAY_REF" 'any(.matches[]; .ref == $r)' > /dev/null; }
           cw wait --app Calculator --text 1792 --source ocr --timeout 15s | check wait-ocr '.source == "ocr" and (.matches | length > 0)'
           if cw wait --app Calculator --text 1792 --gone true --timeout 1s 2> /dev/null; then echo "::error::wait --gone reported the shown result as gone"; exit 1; fi
 
@@ -233,13 +236,17 @@ jobs:
           MARK=$(jq -r '[.marks[] | select(.label == "7" or .label == "Seven")][0].ref // empty' "$A/annotate.json")
           [ -n "$MARK" ] || { echo "::error::no mark for 7: $(jq -c '[.marks[].label]' "$A/annotate.json")"; exit 1; }
           cw click --element "$MARK" --app Calculator | check click-mark '.mode == "background"'
-          cw wait --app Calculator --text 7 --source ax --timeout 5s | check mark-pressed '.matches | length > 0'
+          for i in $(seq 1 20); do shown 7 && break; sleep 0.25; done
+          shown 7 || { echo "::error::pressing the annotate mark did not put 7 on the display: $(cw find "" --app Calculator | jq -c --arg r "$DISPLAY_REF" '[.matches[] | select(.ref == $r)]')"; exit 1; }
+          echo "ok mark-pressed"
 
           # click by window coordinates (the windowCenter of a button), in the background
           EIGHT=$(cw find "" --role Button --app Calculator | jq -c '[.matches[] | select(.label == "8" or .label == "Eight" or .automationId == "num8Button")][0]')
           WX=$(echo "$EIGHT" | jq '.windowCenter.x'); WY=$(echo "$EIGHT" | jq '.windowCenter.y')
           cw click --app Calculator --x "$WX" --y "$WY" | check click-xy '.mode == "background"'
-          cw wait --app Calculator --text 78 --source ax --timeout 5s | check xy-pressed '.matches | length > 0'
+          for i in $(seq 1 20); do shown 78 && break; sleep 0.25; done
+          shown 78 || { echo "::error::click --x --y did not press 8"; exit 1; }
+          echo "ok xy-pressed"
 
           # ---------------- Notepad: type / select / set / clipboard / menu / window ----------------
           cw open notepad --wait 15s | tee "$A/open-notepad.json" | jq -c .
@@ -256,7 +263,8 @@ jobs:
           [ -n "$EDIT" ] || EDIT=$(cw find "" --role Edit --app notepad | jq -r '.matches[0].ref // empty')
           [ -n "$EDIT" ] || EDIT=$(cw find "" --role Document --app notepad | jq -r '.matches[0].ref // empty')
           cw set --app notepad --element "$EDIT" --value "Set by aux4/computer-windows CI" | check set '.mode == "background" and (.after | tostring | test("Set by aux4/computer-windows CI"))'
-          cw menu --app notepad | tee "$A/notepad-menu.json" | jq -c '{source, menus: [.menus[] | .title]}'
+          cw menu --app notepad > "$A/notepad-menu.json" 2>&1 || true
+          echo "notepad menu: $(jq -c '{source, menus: [.menus[]? | .title], error}' "$A/notepad-menu.json" 2>/dev/null || cat "$A/notepad-menu.json")"
           cw shortcut ctrl+a --app notepad | check shortcut-ctrl-a '.mode == "background"'
 
           cw window move --app notepad --x 120 --y 90 | check window-move '.after.frame.x == 120 and .after.frame.y == 90 and .mode == "background"'

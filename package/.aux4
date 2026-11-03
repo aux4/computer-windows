@@ -50,7 +50,7 @@
         {
           "name": "info",
           "execute": [
-            "${packageDir}/aux4-computer-windows info ${packageDir}"
+            "\"${packageDir}/aux4-computer-windows\" info \"${packageDir}\""
           ],
           "help": {
             "text": "Describe this provider for aux4/computer: name (win), contract version, platform, version, capabilities and permissions"
@@ -59,7 +59,7 @@
         {
           "name": "notes",
           "execute": [
-            "${packageDir}/aux4-computer-windows notes ${packageDir}"
+            "\"${packageDir}/aux4-computer-windows\" notes \"${packageDir}\""
           ],
           "help": {
             "text": "Print the Windows specifics for agents (markdown): what runs in the background, UIPI/elevation, coordinates, gotchas"
@@ -68,7 +68,7 @@
         {
           "name": "permissions",
           "execute": [
-            "${packageDir}/aux4-computer-windows permissions"
+            "\"${packageDir}/aux4-computer-windows\" permissions"
           ],
           "help": {
             "text": "Report what this process can reach: interactive desktop, elevation (UIPI) and uiAccess"
@@ -77,7 +77,7 @@
         {
           "name": "screenshot",
           "execute": [
-            "${packageDir}/aux4-computer-windows screenshot values(output, display, app, maxWidth, annotate, roles, limit)"
+            "\"${packageDir}/aux4-computer-windows\" screenshot values(output, display, app, maxWidth, annotate, roles, limit)"
           ],
           "help": {
             "text": "Capture a screenshot (PNG) of a display or a specific app's window",
@@ -131,7 +131,7 @@
         {
           "name": "ocr",
           "execute": [
-            "${packageDir}/aux4-computer-windows ocr values(app, image, text, level, languages, mode, scale, timeout)"
+            "\"${packageDir}/aux4-computer-windows\" ocr values(app, image, text, level, languages, mode, scale, timeout)"
           ],
           "help": {
             "text": "Recognize text (Windows.Media.Ocr) on the screen, an app's window or a PNG, with positions in click coordinates",
@@ -191,7 +191,7 @@
         {
           "name": "wait",
           "execute": [
-            "${packageDir}/aux4-computer-windows wait values(text, role, app, gone, source, timeout, interval)"
+            "\"${packageDir}/aux4-computer-windows\" wait values(text, role, app, gone, source, timeout, interval)"
           ],
           "help": {
             "text": "Wait until text, an element or an app window appears (or is gone), checking UI Automation first, then OCR",
@@ -247,7 +247,7 @@
         {
           "name": "read",
           "execute": [
-            "${packageDir}/aux4-computer-windows read values(app, depth)"
+            "\"${packageDir}/aux4-computer-windows\" read values(app, depth)"
           ],
           "help": {
             "text": "Read the UI Automation tree (control view) of the foreground or named app",
@@ -268,7 +268,7 @@
         {
           "name": "find",
           "execute": [
-            "${packageDir}/aux4-computer-windows find values(text, role, app)"
+            "\"${packageDir}/aux4-computer-windows\" find values(text, role, app)"
           ],
           "help": {
             "text": "Find UI elements by text and/or role",
@@ -295,7 +295,7 @@
         {
           "name": "click",
           "execute": [
-            "${packageDir}/aux4-computer-windows click values(x, y, button, count, element, app, mode)"
+            "\"${packageDir}/aux4-computer-windows\" click values(x, y, button, count, element, app, mode)"
           ],
           "help": {
             "text": "Click at coordinates or press an element; in the background (UI Automation) by default",
@@ -346,7 +346,7 @@
         {
           "name": "move",
           "execute": [
-            "${packageDir}/aux4-computer-windows move values(x, y)"
+            "\"${packageDir}/aux4-computer-windows\" move values(x, y)"
           ],
           "help": {
             "text": "Move the mouse cursor to screen coordinates (always real input)",
@@ -367,7 +367,7 @@
         {
           "name": "drag",
           "execute": [
-            "${packageDir}/aux4-computer-windows drag values(x, y, toX, toY)"
+            "\"${packageDir}/aux4-computer-windows\" drag values(x, y, toX, toY)"
           ],
           "help": {
             "text": "Drag the mouse from one point to another (always real input)",
@@ -398,7 +398,7 @@
         {
           "name": "type",
           "execute": [
-            "${packageDir}/aux4-computer-windows type values(text, delay, app, mode)"
+            "\"${packageDir}/aux4-computer-windows\" type values(text, delay, app, mode)"
           ],
           "help": {
             "text": "Type unicode-safe text into the focused text field of an app; in the background by default",
@@ -434,7 +434,7 @@
         {
           "name": "shortcut",
           "execute": [
-            "${packageDir}/aux4-computer-windows shortcut values(keys, delay, app, mode)"
+            "\"${packageDir}/aux4-computer-windows\" shortcut values(keys, delay, app, mode)"
           ],
           "help": {
             "text": "Press a keyboard shortcut, e.g. ctrl+shift+s",
@@ -470,7 +470,7 @@
         {
           "name": "scroll",
           "execute": [
-            "${packageDir}/aux4-computer-windows scroll values(x, y, dx, dy, app, mode)"
+            "\"${packageDir}/aux4-computer-windows\" scroll values(x, y, dx, dy, app, mode)"
           ],
           "help": {
             "text": "Scroll at a position in an app; in the background (UI Automation scroll pattern) by default",
@@ -516,7 +516,7 @@
         {
           "name": "cursor",
           "execute": [
-            "${packageDir}/aux4-computer-windows cursor"
+            "\"${packageDir}/aux4-computer-windows\" cursor"
           ],
           "help": {
             "text": "Get the current mouse cursor position"
@@ -525,7 +525,7 @@
         {
           "name": "screen",
           "execute": [
-            "${packageDir}/aux4-computer-windows screen"
+            "\"${packageDir}/aux4-computer-windows\" screen"
           ],
           "help": {
             "text": "List displays with bounds (logical pixels) and scale factor"
@@ -534,7 +534,7 @@
         {
           "name": "apps",
           "execute": [
-            "${packageDir}/aux4-computer-windows apps"
+            "\"${packageDir}/aux4-computer-windows\" apps"
           ],
           "help": {
             "text": "List running applications"
@@ -543,7 +543,7 @@
         {
           "name": "windows",
           "execute": [
-            "${packageDir}/aux4-computer-windows windows"
+            "\"${packageDir}/aux4-computer-windows\" windows"
           ],
           "help": {
             "text": "List on-screen windows"
@@ -561,7 +561,7 @@
         {
           "name": "quit",
           "execute": [
-            "${packageDir}/aux4-computer-windows quit values(app, force, timeout)"
+            "\"${packageDir}/aux4-computer-windows\" quit values(app, force, timeout)"
           ],
           "help": {
             "text": "Quit an app by closing its windows (reports a 'save changes?' dialog instead of quitting); --force true kills it",
@@ -591,7 +591,7 @@
         {
           "name": "hide",
           "execute": [
-            "${packageDir}/aux4-computer-windows hide values(app)"
+            "\"${packageDir}/aux4-computer-windows\" hide values(app)"
           ],
           "help": {
             "text": "Hide an app: minimize all its windows without activating anything (Windows has no app hide)",
@@ -607,7 +607,7 @@
         {
           "name": "unhide",
           "execute": [
-            "${packageDir}/aux4-computer-windows unhide values(app)"
+            "\"${packageDir}/aux4-computer-windows\" unhide values(app)"
           ],
           "help": {
             "text": "Show a hidden (minimized) app's windows again without bringing it to the front",
@@ -623,7 +623,7 @@
         {
           "name": "open",
           "execute": [
-            "${packageDir}/aux4-computer-windows open values(app, mode, file, url, wait, hidden)"
+            "\"${packageDir}/aux4-computer-windows\" open values(app, mode, file, url, wait, hidden)"
           ],
           "help": {
             "text": "Open an app, a file or a URL without activating it (by default); optionally wait for its window",
@@ -674,7 +674,7 @@
         {
           "name": "focus",
           "execute": [
-            "${packageDir}/aux4-computer-windows focus values(app)"
+            "\"${packageDir}/aux4-computer-windows\" focus values(app)"
           ],
           "help": {
             "text": "Bring a running application to the foreground (always foreground)",
@@ -690,7 +690,7 @@
         {
           "name": "state",
           "execute": [
-            "${packageDir}/aux4-computer-windows state values(app, depth, limit)"
+            "\"${packageDir}/aux4-computer-windows\" state values(app, depth, limit)"
           ],
           "help": {
             "text": "One-call snapshot: foreground app, the app's windows, focused element, open dialog and a compact tree of its actionable/text elements",
@@ -716,7 +716,7 @@
         {
           "name": "menu",
           "execute": [
-            "${packageDir}/aux4-computer-windows menu values(app, path, depth, mode)"
+            "\"${packageDir}/aux4-computer-windows\" menu values(app, path, depth, mode)"
           ],
           "help": {
             "text": "List an app's menu bar, or press a menu item by path (e.g. 'File > New'); in the background by default",
@@ -752,7 +752,7 @@
         {
           "name": "select",
           "execute": [
-            "${packageDir}/aux4-computer-windows select values(app, all, text, occurrence, start, length, element, mode)"
+            "\"${packageDir}/aux4-computer-windows\" select values(app, all, text, occurrence, start, length, element, mode)"
           ],
           "help": {
             "text": "Select text in the focused (or given) text element; in the background",
@@ -812,7 +812,7 @@
         {
           "name": "set",
           "execute": [
-            "${packageDir}/aux4-computer-windows set values(app, element, value, checked, option, mode)"
+            "\"${packageDir}/aux4-computer-windows\" set values(app, element, value, checked, option, mode)"
           ],
           "help": {
             "text": "Set an element: a text field or slider value, a checkbox state or a combo box / list option; in the background",
@@ -858,7 +858,7 @@
         {
           "name": "dialog",
           "execute": [
-            "${packageDir}/aux4-computer-windows dialog values(app, press, mode)"
+            "\"${packageDir}/aux4-computer-windows\" dialog values(app, press, mode)"
           ],
           "help": {
             "text": "Detect an open message box, dialog or save/open panel (kind, title, text, buttons, fields); --press a button by title",
@@ -889,7 +889,7 @@
         {
           "name": "log",
           "execute": [
-            "${packageDir}/aux4-computer-windows log values(limit)"
+            "\"${packageDir}/aux4-computer-windows\" log values(limit)"
           ],
           "help": {
             "text": "Show the most recent entries of the shared action log (every input/state command is recorded)",
@@ -905,7 +905,7 @@
         {
           "name": "stop",
           "execute": [
-            "${packageDir}/aux4-computer-windows stop"
+            "\"${packageDir}/aux4-computer-windows\" stop"
           ],
           "help": {
             "text": "Turn on the shared stop switch: every command that sends input or changes state refuses until 'resume'"
@@ -914,7 +914,7 @@
         {
           "name": "resume",
           "execute": [
-            "${packageDir}/aux4-computer-windows resume"
+            "\"${packageDir}/aux4-computer-windows\" resume"
           ],
           "help": {
             "text": "Turn off the stop switch so input and state commands work again"
@@ -937,7 +937,7 @@
         {
           "name": "list",
           "execute": [
-            "${packageDir}/aux4-computer-windows window list values(app)"
+            "\"${packageDir}/aux4-computer-windows\" window list values(app)"
           ],
           "help": {
             "text": "List an app's windows (index, ref, id, title, frame, minimized, maximized, dialog, focused)",
@@ -954,7 +954,7 @@
         {
           "name": "move",
           "execute": [
-            "${packageDir}/aux4-computer-windows window move values(app, title, index, mode) values(x, y)"
+            "\"${packageDir}/aux4-computer-windows\" window move values(app, title, index, mode) values(x, y)"
           ],
           "help": {
             "text": "Move a window so its top-left corner is at --x/--y (logical pixels); returns the frame before and after",
@@ -1000,7 +1000,7 @@
         {
           "name": "resize",
           "execute": [
-            "${packageDir}/aux4-computer-windows window resize values(app, title, index, mode) values(width, height)"
+            "\"${packageDir}/aux4-computer-windows\" window resize values(app, title, index, mode) values(width, height)"
           ],
           "help": {
             "text": "Resize a window to --width/--height (logical pixels; give one to keep the other); returns the frame before and after",
@@ -1046,7 +1046,7 @@
         {
           "name": "minimize",
           "execute": [
-            "${packageDir}/aux4-computer-windows window minimize values(app, title, index, mode)"
+            "\"${packageDir}/aux4-computer-windows\" window minimize values(app, title, index, mode)"
           ],
           "help": {
             "text": "Minimize a window to the taskbar (without activating anything)",
@@ -1082,7 +1082,7 @@
         {
           "name": "restore",
           "execute": [
-            "${packageDir}/aux4-computer-windows window restore values(app, title, index, mode)"
+            "\"${packageDir}/aux4-computer-windows\" window restore values(app, title, index, mode)"
           ],
           "help": {
             "text": "Restore a minimized window (without activating it)",
@@ -1118,7 +1118,7 @@
         {
           "name": "close",
           "execute": [
-            "${packageDir}/aux4-computer-windows window close values(app, title, index, mode)"
+            "\"${packageDir}/aux4-computer-windows\" window close values(app, title, index, mode)"
           ],
           "help": {
             "text": "Close a window (WM_CLOSE); reports the 'save changes?' dialog if the app asks",
@@ -1154,7 +1154,7 @@
         {
           "name": "fullscreen",
           "execute": [
-            "${packageDir}/aux4-computer-windows window fullscreen values(app, title, index, mode) values(enabled)"
+            "\"${packageDir}/aux4-computer-windows\" window fullscreen values(app, title, index, mode) values(enabled)"
           ],
           "help": {
             "text": "Maximize (enabled true) or restore (false) a window; Windows has no per-app full screen",
@@ -1200,7 +1200,7 @@
         {
           "name": "raise",
           "execute": [
-            "${packageDir}/aux4-computer-windows window raise values(app, title, index, mode)"
+            "\"${packageDir}/aux4-computer-windows\" window raise values(app, title, index, mode)"
           ],
           "help": {
             "text": "Raise a window and bring its app to the front (always foreground)",
@@ -1241,7 +1241,7 @@
         {
           "name": "copy",
           "execute": [
-            "${packageDir}/aux4-computer-windows clipboard-copy values(text, app, mode)"
+            "\"${packageDir}/aux4-computer-windows\" clipboard-copy values(text, app, mode)"
           ],
           "help": {
             "text": "Copy to the clipboard: with --text, write it directly; without, copy the app's current selection (background by default) and return it",
@@ -1272,7 +1272,7 @@
         {
           "name": "paste",
           "execute": [
-            "${packageDir}/aux4-computer-windows clipboard-paste values(text, app, mode)"
+            "\"${packageDir}/aux4-computer-windows\" clipboard-paste values(text, app, mode)"
           ],
           "help": {
             "text": "Paste the clipboard into the focused element of an app (background by default); with --text, write it to the clipboard first",
@@ -1303,7 +1303,7 @@
         {
           "name": "read",
           "execute": [
-            "${packageDir}/aux4-computer-windows clipboard-read"
+            "\"${packageDir}/aux4-computer-windows\" clipboard-read"
           ],
           "help": {
             "text": "Read the current clipboard text (no side effects)"
