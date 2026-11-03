@@ -104,34 +104,37 @@ jobs:
           registry: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || '' }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  # The published package, downloaded from the hub it went to (the Windows zip pkger would
-  # install; pkger can't install itself on Windows yet), runs on Windows: ci/installed.test.md.
+  # End to end on a clean Windows runner, the way a user does it: install aux4 and pkger with the
+  # documented installer (curl https://aux4.sh | sh, from Git Bash; dev.* on dev = the dev hub),
+  # `pkger install` the version just published, and run it: ci/installed.test.md. No overrides.
   verify-install:
     needs: [publish]
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.os }}
     env:
-      SHELL: bash
-      ComSpec: C:\Program Files\Git\bin\bash.exe
+      INSTALL_PREFIX: ${{ github.ref_name == 'dev' && 'dev.' || '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Install aux4
         shell: bash
+        run: curl -fsSL "https://${INSTALL_PREFIX}aux4.sh" | sh && cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+
+      - name: Install pkger and the published package
+        shell: bash
         run: |
-          TAG=$(basename "$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/aux4/aux4/releases/latest)")
-          curl -fsSL -o "$RUNNER_TEMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_amd64_aux4_aux4_${TAG#v}.zip"
-          mkdir -p "$HOME/.aux4.config/packages" && unzip -o -q "$RUNNER_TEMP/aux4.zip" -d "$HOME/.aux4.config/packages"
-          cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
-
-      - name: Load aux4/test and aux4/computer
-        shell: bash
-        run: aux4 ci windows-packages --computerHub ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io' || 'https://api.hub.aux4.io' }}
-
-      - name: Download the published package
-        shell: bash
-        run: aux4 ci installed-package --version ${{ needs.publish.outputs.version }} --hub ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io' || 'https://api.hub.aux4.io' }}
+          curl -fsSL "https://${INSTALL_PREFIX}pkger.aux4.sh" | sh
+          aux4 aux4 pkger install aux4/system-installer-npm
+          aux4 aux4 pkger install aux4/test aux4/computer-windows@${{ needs.publish.outputs.version }}
+          aux4 aux4 pkger list
 
       - name: Run it
         shell: bash
-        run: mkdir -p "$RUNNER_TEMP/verify" && cp ci/installed.test.md "$RUNNER_TEMP/verify/" && cd "$RUNNER_TEMP/verify" && aux4 test run
+        run: |
+          aux4 computer win info
+          aux4 computer providers
+          mkdir -p "$RUNNER_TEMP/verify" && cp ci/installed.test.md "$RUNNER_TEMP/verify/" && cd "$RUNNER_TEMP/verify" && aux4 test run

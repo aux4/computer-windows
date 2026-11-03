@@ -11,8 +11,10 @@ on:
 
 env:
   CARGO_TERM_COLOR: never
-  # aux4 runs command lines with $SHELL (default /bin/sh, which doesn't exist on Windows)
-  SHELL: bash
+  # aux4 and pkger are installed the way a user does it (curl https://aux4.sh | sh, from Git Bash).
+  # The dev branch uses the dev hub installers ('dev.'); every other branch uses the prod ones, now
+  # that aux4 and pkger with Windows support are live in prod.
+  INSTALL_PREFIX: ${{ github.ref_name == 'dev' && 'dev.' || '' }}
 
 jobs:
   build:
@@ -59,10 +61,6 @@ jobs:
           - os: windows-11-arm
             arch: arm64
     runs-on: ${{ matrix.os }}
-    env:
-      # aux4/test runs each test's command line through child_process.exec, which uses ComSpec.
-      ComSpec: C:\Program Files\Git\bin\bash.exe
-      # Keep ~/.aux4.config on the checkout's drive (D:): jest can't resolve its runner across drives.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -73,18 +71,17 @@ jobs:
           name: dist
           path: package/dist
 
-      # aux4.sh supports Linux and macOS only: take aux4 from its GitHub release.
       - name: Install aux4
         shell: bash
-        run: |
-          TAG=$(basename "$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/aux4/aux4/releases/latest)")
-          curl -fsSL -o "$RUNNER_TEMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_${{ matrix.arch }}_aux4_aux4_${TAG#v}.zip"
-          mkdir -p "$HOME/.aux4.config/packages" && unzip -o -q "$RUNNER_TEMP/aux4.zip" -d "$HOME/.aux4.config/packages"
-          cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+        run: curl -fsSL "https://${INSTALL_PREFIX}aux4.sh" | sh && cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
 
-      - name: Load aux4/test and aux4/computer
+      - name: Install packages
         shell: bash
-        run: aux4 ci windows-packages
+        run: |
+          curl -fsSL "https://${INSTALL_PREFIX}pkger.aux4.sh" | sh
+          aux4 aux4 pkger install aux4/system-installer-npm
+          aux4 aux4 pkger install aux4/test aux4/computer
+          aux4 aux4 pkger list
 
       - name: Link binary
         shell: bash
@@ -100,14 +97,10 @@ jobs:
         working-directory: package
         run: aux4 test run test
 
-      # aux4 computer conformance builds its `aux4 test run <dir>` with an unquoted Windows path,
-      # so on Windows run the same suite the way it does: its files, from package/, with the provider set.
       - name: Conformance (aux4/computer)
         shell: bash
         working-directory: package
-        env:
-          AUX4_COMPUTER_PROVIDER: win
-        run: mkdir -p .aux4-computer-conformance && cp "$HOME"/.aux4.config/packages/aux4/computer/conformance/*.test.md .aux4-computer-conformance/ && aux4 test run .aux4-computer-conformance
+        run: aux4 computer conformance --provider win
 
   test-live:
     needs: [build]
@@ -122,8 +115,6 @@ jobs:
           - os: windows-11-arm
             arch: arm64
     runs-on: ${{ matrix.os }}
-    env:
-      ComSpec: C:\Program Files\Git\bin\bash.exe
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -136,15 +127,15 @@ jobs:
 
       - name: Install aux4
         shell: bash
-        run: |
-          TAG=$(basename "$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/aux4/aux4/releases/latest)")
-          curl -fsSL -o "$RUNNER_TEMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_${{ matrix.arch }}_aux4_aux4_${TAG#v}.zip"
-          mkdir -p "$HOME/.aux4.config/packages" && unzip -o -q "$RUNNER_TEMP/aux4.zip" -d "$HOME/.aux4.config/packages"
-          cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+        run: curl -fsSL "https://${INSTALL_PREFIX}aux4.sh" | sh && cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
 
-      - name: Load aux4/test and aux4/computer
+      - name: Install packages
         shell: bash
-        run: aux4 ci windows-packages
+        run: |
+          curl -fsSL "https://${INSTALL_PREFIX}pkger.aux4.sh" | sh
+          aux4 aux4 pkger install aux4/system-installer-npm
+          aux4 aux4 pkger install aux4/test aux4/computer
+          aux4 aux4 pkger list
 
       - name: Link binary
         shell: bash
