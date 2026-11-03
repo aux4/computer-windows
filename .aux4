@@ -84,6 +84,7 @@
             "aux4 ci quote-package-dir --file \"$HOME/.aux4.config/packages/aux4/computer/.aux4\"",
             "sed -i 's#e.spawn(\"jest\",\\[#e.spawn(process.execPath,[n.resolve(l,\"node_modules\",\"jest\",\"bin\",\"jest.js\"),#' \"$HOME/.aux4.config/packages/aux4/test/lib/aux4-test.js\"",
             "grep -c \"process.execPath,\\[n.resolve(l\" \"$HOME/.aux4.config/packages/aux4/test/lib/aux4-test.js\"",
+            "ls -la \"$HOME/.aux4.config/packages/aux4/test/engine/node_modules/jest-circus/build/\" | head -5; ls \"$HOME/.aux4.config/packages/aux4/test/engine/node_modules\" | wc -l; node -e \"console.log(require.resolve('jest-circus/runner', {paths: [process.argv[1]]}))\" \"$(cygpath -w \"$HOME/.aux4.config/packages/aux4/test/engine\")\" || true",
             "echo \"AUX4_AUX4_FILES=$(cygpath -w \"$HOME/.aux4.config/packages/aux4/test/.aux4\");$(cygpath -w \"$HOME/.aux4.config/packages/aux4/computer/.aux4\")\" >> \"$GITHUB_ENV\"",
             "jq -r \".name + \\\" \\\" + .version\" \"$HOME/.aux4.config/packages/aux4/test/.aux4\" \"$HOME/.aux4.config/packages/aux4/computer/.aux4\""
           ],
