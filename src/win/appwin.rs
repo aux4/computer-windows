@@ -194,6 +194,11 @@ pub fn quit(a: &[String]) -> ! {
     let q = arg(a, 0);
     let force = parse_bool("force", &arg(a, 1), false);
     let timeout = parse_duration("timeout", &arg(a, 2), 5.0);
+    let qs = q.trim().to_lowercase();
+    let qs = qs.strip_suffix(".exe").unwrap_or(&qs).to_string();
+    if PROTECTED.contains(&qs.as_str()) {
+        fail(format!("Refusing to quit {}: Windows needs it to keep the session working", q.trim()));
+    }
     let app = resolve_app(&q);
     let lname = app.name.to_lowercase();
     if app.pid == std::process::id() {

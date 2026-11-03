@@ -100,10 +100,14 @@ jobs:
         working-directory: package
         run: aux4 test run test
 
+      # aux4 computer conformance builds its `aux4 test run <dir>` with an unquoted Windows path,
+      # so on Windows run the same suite the way it does: its files, from package/, with the provider set.
       - name: Conformance (aux4/computer)
         shell: bash
         working-directory: package
-        run: aux4 computer conformance --provider win
+        env:
+          AUX4_COMPUTER_PROVIDER: win
+        run: mkdir -p .aux4-computer-conformance && cp "$HOME"/.aux4.config/packages/aux4/computer/conformance/*.test.md .aux4-computer-conformance/ && aux4 test run .aux4-computer-conformance
 
   test-live:
     needs: [build]

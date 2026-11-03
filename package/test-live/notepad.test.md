@@ -47,7 +47,7 @@ aux4 computer win select --app notepad --text aux4 | jq -c '{mode, selected, ran
 ```
 
 ```expect
-{"mode":"background","selected":"aux4","range":{"start":11,"length":4}}
+{"mode":"background","selected":"aux4","range":{"length":4,"start":11}}
 ```
 
 ### should copy the selection in the background

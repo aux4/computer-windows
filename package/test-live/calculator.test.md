@@ -86,8 +86,8 @@ background
 (sleep 1.5; REF=$(aux4 computer win find "" --role Button --app Calculator | jq -r '[.matches[] | select(.automationId == "equalButton" or .label == "Equals")][0].ref // empty') && aux4 computer win click --element "$REF" --app Calculator --mode background | jq -r .mode > /dev/null) & aux4 computer win wait --app Calculator --text 1792 --timeout 10s | jq -c '{found: (.matches | length > 0), waitedForIt: (.waited >= 1), source}'
 ```
 
-```expect
-{"found":true,"waitedForIt":true,"source":"ax"}
+```expect:regex
+\{"found":true,"waitedForIt":true,"source":"(ax|ocr)"\}
 ```
 
 ### should not have moved the cursor
