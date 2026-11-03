@@ -20,6 +20,10 @@ Ships native binaries for `windows/amd64` and `windows/arm64`.
 aux4 aux4 pkger install aux4/computer-windows
 ```
 
+> **Known issue:** on Windows, `pkger install` can currently fail while pkger replaces its own executable, and
+> aux4 needs `SHELL=bash` (Git Bash). Both are being fixed in aux4 itself; until then this package may not
+> install or run on a stock Windows setup.
+
 ## What it can reach
 
 ```bash
