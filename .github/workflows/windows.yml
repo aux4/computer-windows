@@ -123,6 +123,26 @@ jobs:
         working-directory: package
         run: aux4 computer win info | jq . && aux4 computer win permissions | jq . && aux4 computer win screen | jq -c .
 
+      # aux4/test on Windows: its test commands run through child_process.exec (cmd.exe unless
+      # ComSpec says otherwise) and it spawns `jest` without a shell (npm's jest is a .cmd/sh shim).
+      # Point ComSpec at Git Bash and preload a spawn wrapper that runs jest through it.
+      - name: Make aux4/test run on Windows
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/win-spawn.js" <<'JS'
+          const cp = require('child_process');
+          const spawn = cp.spawn;
+          const q = (a) => "'" + String(a).replace(/'/g, "'\\''") + "'";
+          cp.spawn = function (cmd, args, opts) {
+            if (process.platform === 'win32' && cmd === 'jest') {
+              return spawn.call(this, ['jest'].concat((args || []).map(q)).join(' '), [], Object.assign({}, opts, { shell: process.env.ComSpec }));
+            }
+            return spawn.apply(this, arguments);
+          };
+          JS
+          echo "ComSpec=C:\Program Files\Git\bin\bash.exe" >> "$GITHUB_ENV"
+          echo "NODE_OPTIONS=--require $(cygpath -w "$RUNNER_TEMP/win-spawn.js")" >> "$GITHUB_ENV"
+
       - name: Package tests
         shell: bash
         working-directory: package
