@@ -78,7 +78,8 @@ jobs:
         shell: bash
         run: |
           curl -fsSL "https://${INSTALL_PREFIX}pkger.aux4.sh" | sh
-          aux4 aux4 pkger install aux4/system-installer-npm aux4/test aux4/computer
+          aux4 aux4 pkger install aux4/system-installer-npm
+          aux4 aux4 pkger install aux4/test aux4/computer
           aux4 aux4 pkger list
 
       - name: Link binary
@@ -131,7 +132,8 @@ jobs:
         shell: bash
         run: |
           curl -fsSL "https://${INSTALL_PREFIX}pkger.aux4.sh" | sh
-          aux4 aux4 pkger install aux4/system-installer-npm aux4/test aux4/computer
+          aux4 aux4 pkger install aux4/system-installer-npm
+          aux4 aux4 pkger install aux4/test aux4/computer
           aux4 aux4 pkger list
 
       - name: Link binary
