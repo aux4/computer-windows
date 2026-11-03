@@ -591,6 +591,14 @@ pub trait Foreground {
     fn bring_forward(&self) -> Result<(), String>;
     /// Put the saved state back; returns {"cursor":bool,"frontmost":bool}.
     fn restore(&self, saved: Box<dyn std::any::Any>) -> Value;
+    /// Before a background attempt: remember the foreground window.
+    fn bg_begin(&self) -> Option<Box<dyn std::any::Any>> {
+        None
+    }
+    /// After it: if the app took the foreground anyway, put it back ({"frontmost": bool}).
+    fn bg_end(&self, _saved: Box<dyn std::any::Any>) -> Option<Value> {
+        None
+    }
 }
 
 pub struct NoForeground;
@@ -632,7 +640,17 @@ pub fn run_action<'a>(
                 } else if simulate_background_unavailable() {
                     Outcome::Unavailable("background simulated as unavailable".into())
                 } else {
-                    bg()
+                    let token = fg.bg_begin();
+                    let o = bg();
+                    if let (Some(t), Outcome::Done(m)) = (token, &o) {
+                        let mut m = m.clone();
+                        if let Some(r) = fg.bg_end(t) {
+                            m.insert("restored".into(), r);
+                        }
+                        Outcome::Done(m)
+                    } else {
+                        o
+                    }
                 };
                 match outcome {
                     Outcome::Done(extra) => {

@@ -250,6 +250,14 @@ impl Foreground for Fg {
         }
         Ok(())
     }
+    fn bg_begin(&self) -> Option<Box<dyn std::any::Any>> {
+        Some(Box::new(foreground_window().0 as isize))
+    }
+    fn bg_end(&self, saved: Box<dyn std::any::Any>) -> Option<Value> {
+        let prev = HWND(*saved.downcast::<isize>().ok()? as *mut core::ffi::c_void);
+        sleep_ms(60);
+        restore_foreground_if_changed(prev).map(|ok| json!({"frontmost": ok}))
+    }
     fn restore(&self, saved: Box<dyn std::any::Any>) -> Value {
         let s = match saved.downcast::<Saved>() {
             Ok(s) => s,

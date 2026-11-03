@@ -63,6 +63,21 @@ fn post_click(h: HWND, p: POINT, right: bool) -> bool {
 
 /// Press an element in the background through its UI Automation patterns.
 fn press_node(n: &Node, nodes: Option<&[Node]>, idx: usize, p: Option<POINT>, right: bool) -> Result<&'static str, String> {
+    // A Win32 push button: tell its parent it was clicked. UI Automation's Invoke on these goes
+    // through BM_CLICK, which can activate the window.
+    if !right && !n.hwnd.0.is_null() && n.ctype == 50000 && class_name(n.hwnd).eq_ignore_ascii_case("button") {
+        let style = unsafe { GetWindowLongW(n.hwnd, GWL_STYLE) } as u32 & 0xF;
+        if matches!(style, 0x0 | 0x1 | 0xB) {
+            unsafe {
+                let id = GetDlgCtrlID(n.hwnd) as u32;
+                if let Ok(parent) = GetParent(n.hwnd) {
+                    if !parent.0.is_null() && PostMessageW(Some(parent), WM_COMMAND, WPARAM((id & 0xffff) as usize), LPARAM(n.hwnd.0 as isize)).is_ok() {
+                        return Ok("BN_CLICKED");
+                    }
+                }
+            }
+        }
+    }
     if !right {
         if n.invoke && uia::invoke(n).is_ok() {
             return Ok("Invoke");

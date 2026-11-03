@@ -83,7 +83,9 @@ jobs:
           curl -fsSL -H "User-Agent: $(aux4 aux4 version --system)" -o "$TMP/pkger.zip" "https://api.hub.aux4.io/v1/packages/public/aux4/pkger/latest?download=true"
           mkdir -p "$TMP/pkger"
           unzip -o -q "$TMP/pkger.zip" -d "$TMP/pkger"
-          "$TMP/pkger/aux4/pkger/aux4-pkger.exe" install public "$TMP/pkger.zip"
+          # the first install can hit a transient "file in use" while the new exe is scanned
+          for i in 1 2 3 4 5; do "$TMP/pkger/aux4/pkger/aux4-pkger.exe" install public "$TMP/pkger.zip" && break; sleep 5; done
+          aux4 aux4 pkger list > /dev/null
           npm i -g jest > /dev/null
           aux4 aux4 pkger install aux4/test
           aux4 aux4 pkger list
@@ -230,9 +232,11 @@ jobs:
           cw wait --app Calculator --text 1792 --source ocr --timeout 15s | check wait-ocr '.source == "ocr" and (.matches | length > 0)'
           if cw wait --app Calculator --text 1792 --gone true --timeout 1s 2> /dev/null; then echo "::error::wait --gone reported the shown result as gone"; exit 1; fi
 
-          # screenshot --annotate: a mark's ref presses the right button
-          cw screenshot --app Calculator --annotate true --output "$A/calc-annotated.png" | check annotate '.annotated and (.marks | length > 5) and .width > 0'
+          # screenshot --annotate: a mark's ref presses the right button (refs are paths in the tree as it
+          # is now: clear first, the display changes the tree)
           press clearButton Clear C
+          sleep 0.5
+          cw screenshot --app Calculator --annotate true --output "$A/calc-annotated.png" | check annotate '.annotated and (.marks | length > 5) and .width > 0'
           MARK=$(jq -r '[.marks[] | select(.label == "7" or .label == "Seven")][0].ref // empty' "$A/annotate.json")
           [ -n "$MARK" ] || { echo "::error::no mark for 7: $(jq -c '[.marks[].label]' "$A/annotate.json")"; exit 1; }
           cw click --element "$MARK" --app Calculator | check click-mark '.mode == "background"'

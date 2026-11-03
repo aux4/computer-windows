@@ -127,7 +127,8 @@ jobs:
           curl -fsSL -H "User-Agent: $(aux4 aux4 version --system)" -o "$TMP/pkger.zip" "https://api.hub.aux4.io/v1/packages/public/aux4/pkger/latest?download=true"
           mkdir -p "$TMP/pkger"
           unzip -o -q "$TMP/pkger.zip" -d "$TMP/pkger"
-          "$TMP/pkger/aux4/pkger/aux4-pkger.exe" install public "$TMP/pkger.zip"
+          for i in 1 2 3 4 5; do "$TMP/pkger/aux4/pkger/aux4-pkger.exe" install public "$TMP/pkger.zip" && break; sleep 5; done
+          aux4 aux4 pkger list > /dev/null
 
       - name: Install the published package
         shell: bash
