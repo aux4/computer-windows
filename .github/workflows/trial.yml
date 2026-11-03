@@ -1,0 +1,115 @@
+name: Runner trial
+
+# One-off probe: does a hosted Windows runner have an interactive desktop where UI Automation,
+# SendInput, screen capture and Windows.Media.Ocr work? Findings are recorded in the kb.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - trial
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-2022, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Probe desktop
+        shell: powershell
+        continue-on-error: true
+        run: |
+          $ErrorActionPreference = 'Continue'
+          "== OS"; (Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture | Format-List | Out-String)
+          "== user/session"; whoami; [System.Diagnostics.Process]::GetCurrentProcess().SessionId; query user 2>&1
+          "== elevated"; ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+          "== UAC"; Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System | Select-Object EnableLUA, ConsentPromptBehaviorAdmin | Format-List | Out-String
+          "== explorer"; Get-Process explorer -ErrorAction SilentlyContinue | Select-Object Id, SessionId | Format-Table | Out-String
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          "== screens"; [System.Windows.Forms.Screen]::AllScreens | Format-List | Out-String
+          "== input desktop"
+          Add-Type @'
+          using System; using System.Runtime.InteropServices;
+          public static class W {
+            [DllImport("user32.dll")] public static extern IntPtr OpenInputDesktop(uint f, bool i, uint a);
+            [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+            [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+            [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+            [DllImport("user32.dll")] public static extern uint GetDpiForSystem();
+            [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X; public int Y; }
+          }
+          '@
+          "OpenInputDesktop: " + [W]::OpenInputDesktop(0, $false, 0x100)
+          "Foreground: " + [W]::GetForegroundWindow()
+          "DPI: " + [W]::GetDpiForSystem()
+          [W]::SetCursorPos(200, 300) | Out-Null; $p = New-Object W+POINT; [W]::GetCursorPos([ref]$p) | Out-Null; "cursor after SetCursorPos(200,300): $($p.X),$($p.Y)"
+
+          "== apps on disk"
+          foreach ($f in 'C:\Windows\System32\calc.exe','C:\Windows\System32\win32calc.exe','C:\Windows\System32\notepad.exe','C:\Windows\notepad.exe','C:\Windows\System32\mspaint.exe','C:\Windows\System32\charmap.exe','C:\Windows\regedit.exe','C:\Windows\System32\wordpad.exe') { "$f : $(Test-Path $f)" }
+          Get-AppxPackage *calculator* -ErrorAction SilentlyContinue | Select-Object Name, Version | Format-Table | Out-String
+          Get-AppxPackage *notepad* -ErrorAction SilentlyContinue | Select-Object Name, Version | Format-Table | Out-String
+
+          "== OCR"
+          try {
+            [Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime] | Out-Null
+            "ocr langs: " + (([Windows.Media.Ocr.OcrEngine]::AvailableRecognizerLanguages | ForEach-Object { $_.LanguageTag }) -join ',')
+            "ocr from profile: " + ($null -ne [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages())
+          } catch { "ocr error: $_" }
+          Get-WindowsCapability -Online -Name 'Language.OCR*' -ErrorAction SilentlyContinue | Select-Object Name, State | Format-Table | Out-String
+
+          "== Calculator"
+          Start-Process calc.exe
+          Start-Sleep 6
+          Get-Process | Where-Object { $_.MainWindowTitle } | Select-Object ProcessName, Id, MainWindowTitle | Format-Table | Out-String
+          Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+          $root = [System.Windows.Automation.AutomationElement]::RootElement
+          "top-level windows (UIA):"
+          $root.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { "  [" + $_.Current.ClassName + "] " + $_.Current.Name + " pid=" + $_.Current.ProcessId }
+          $calc = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, 'Calculator')))
+          if ($calc) {
+            $buttons = $calc.FindAll([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)))
+            "calculator buttons: " + (($buttons | ForEach-Object { $_.Current.Name + '/' + $_.Current.AutomationId }) -join ' | ')
+            foreach ($id in 'num2Button','num5Button','num6Button','multiplyButton','num7Button','equalButton') {
+              $b = $calc.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty, $id)))
+              if ($b) { $b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 300 } else { "missing $id" }
+            }
+            $disp = $calc.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty, 'CalculatorResults')))
+            if ($disp) { "display: " + $disp.Current.Name }
+          } else { "no Calculator window via UIA" }
+
+          "== Notepad + SendInput"
+          $np = Start-Process notepad.exe -PassThru
+          Start-Sleep 3
+          $wsh = New-Object -ComObject WScript.Shell
+          "AppActivate: " + $wsh.AppActivate($np.Id)
+          Start-Sleep 1
+          [System.Windows.Forms.SendKeys]::SendWait("hello from sendinput")
+          Start-Sleep 1
+          $npw = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $np.Id)))
+          if ($npw) {
+            "notepad window: " + $npw.Current.Name + " class=" + $npw.Current.ClassName
+            $doc = $npw.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.OrCondition((New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Document)), (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit)))))
+            if ($doc) {
+              "edit class=" + $doc.Current.ClassName + " type=" + $doc.Current.ControlType.ProgrammaticName
+              try { "value: " + $doc.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { "no value pattern: $_" }
+              try { "text: " + $doc.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern).DocumentRange.GetText(200) } catch { "no text pattern" }
+            }
+          } else { "notepad window not found via UIA" }
+
+          "== screen capture"
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          try { $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size); "CopyFromScreen ok" } catch { "CopyFromScreen failed: $_" }
+          $colors = @{}; for ($x = 0; $x -lt $b.Width; $x += 37) { for ($y = 0; $y -lt $b.Height; $y += 37) { $colors[$bmp.GetPixel($x, $y).ToArgb()] = 1 } }
+          "distinct sampled colors: " + $colors.Count
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\trial" | Out-Null
+          $bmp.Save("$env:RUNNER_TEMP\trial\screen.png", [System.Drawing.Imaging.ImageFormat]::Png)
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trial-${{ matrix.os }}
+          path: ${{ runner.temp }}/trial
