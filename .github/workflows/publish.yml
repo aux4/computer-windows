@@ -112,7 +112,6 @@ jobs:
     env:
       SHELL: bash
       ComSpec: C:\Program Files\Git\bin\bash.exe
-      HOME: D:\a\_temp\home
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
