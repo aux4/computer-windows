@@ -11,9 +11,10 @@ on:
 
 env:
   CARGO_TERM_COLOR: never
-  # aux4 and pkger are installed the way a user does it (curl https://aux4.sh | sh, from Git Bash);
-  # 'dev.' takes them from the dev hub. Empty = the prod installers.
-  INSTALL_PREFIX: 'dev.'
+  # aux4 and pkger are installed the way a user does it (curl https://aux4.sh | sh, from Git Bash).
+  # The dev branch uses the dev hub installers ('dev.'); every other branch uses the prod ones, now
+  # that aux4 and pkger with Windows support are live in prod.
+  INSTALL_PREFIX: ${{ github.ref_name == 'dev' && 'dev.' || '' }}
 
 jobs:
   build:
