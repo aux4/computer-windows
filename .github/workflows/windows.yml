@@ -95,6 +95,11 @@ jobs:
         working-directory: package
         run: aux4 computer win info | jq -c '{provider, contract, platform, version, permissions}'
 
+      - name: Diagnose nested aux4
+        shell: bash
+        working-directory: package
+        run: node -e "require('child_process').exec('env | grep -i aux4_aux4; aux4 computer win info | head -c 80', (e, o, s) => console.log(o, s))"
+
       - name: Package tests
         shell: bash
         working-directory: package
