@@ -1,0 +1,5 @@
+target/
+package/dist/
+package/aux4-computer-windows
+package/aux4-computer-windows.exe
+*.zip

@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+      - dev
+      - trial
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Lint
+        uses: aux4/action@v1
+        with:
+          command: lint
+          strict: 'true'
+
+  windows:
+    uses: ./.github/workflows/windows.yml

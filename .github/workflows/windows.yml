@@ -1,0 +1,305 @@
+name: Windows build, test and live UI test
+
+# Builds the Rust binaries on Windows (MSVC), runs the unit tests, the package's .test.md files,
+# the aux4/computer conformance suite, and a live UI test on hosted Windows runners (which have an
+# interactive desktop: UI Automation, SendInput, screen capture and OCR all work there).
+# Called by ci.yml on branches and by publish.yml before publishing.
+on:
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: never
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Rust targets
+        shell: bash
+        run: rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
+
+      - name: Unit tests
+        shell: bash
+        run: cargo test --target x86_64-pc-windows-msvc
+
+      - name: Build amd64 + arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --release --target x86_64-pc-windows-msvc
+          cargo build --release --target aarch64-pc-windows-msvc
+          mkdir -p package/dist/windows/amd64 package/dist/windows/arm64
+          cp target/x86_64-pc-windows-msvc/release/aux4-computer-windows.exe package/dist/windows/amd64/
+          cp target/aarch64-pc-windows-msvc/release/aux4-computer-windows.exe package/dist/windows/arm64/
+          ls -la package/dist/windows/*/
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: package/dist
+          if-no-files-found: error
+
+  test:
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: amd64
+          - os: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: package/dist
+
+      # aux4.sh / pkger.aux4.sh support Linux and macOS only: same steps for Windows.
+      - name: Install aux4, pkger and aux4/test
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=$(basename "$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/aux4/aux4/releases/latest)")
+          TMP=$(mktemp -d)
+          curl -fsSL -o "$TMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_${{ matrix.arch }}_aux4_aux4_${TAG#v}.zip"
+          mkdir -p "$HOME/.aux4.config/packages"
+          unzip -o -q "$TMP/aux4.zip" -d "$HOME/.aux4.config/packages"
+          BIN="$HOME/.aux4.config/packages/aux4/aux4"
+          export PATH="$BIN:$PATH"
+          cygpath -w "$BIN" >> "$GITHUB_PATH"
+          aux4 aux4 version
+          curl -fsSL -H "User-Agent: $(aux4 aux4 version --system)" -o "$TMP/pkger.zip" "https://api.hub.aux4.io/v1/packages/public/aux4/pkger/latest?download=true"
+          mkdir -p "$TMP/pkger"
+          unzip -o -q "$TMP/pkger.zip" -d "$TMP/pkger"
+          PKGER=$(ls "$TMP"/pkger/aux4/pkger/dist/windows/${{ matrix.arch }}/aux4-pkger* 2>/dev/null | head -1 || true)
+          if [ -z "$PKGER" ]; then echo "pkger zip layout:"; find "$TMP/pkger" -maxdepth 5 | head -50; exit 1; fi
+          "$PKGER" install public "$TMP/pkger.zip"
+          npm i -g jest > /dev/null
+          aux4 aux4 pkger install aux4/test
+          aux4 aux4 pkger list
+
+      # aux4/computer is on the dev hub until it is promoted.
+      - name: Install aux4/computer (dev hub)
+        shell: bash
+        env:
+          AUX4_REGISTRY_URL: https://dev.api.hub.aux4.io/v1/packages
+        run: aux4 aux4 pkger install aux4/computer && aux4 computer --help | head -20
+
+      # Run from package/ so aux4 loads the package's own .aux4 (no install needed);
+      # ${packageDir} then resolves to package/, where the binary is copied.
+      - name: Link binary
+        shell: bash
+        run: cp package/dist/windows/${{ matrix.arch }}/aux4-computer-windows.exe package/aux4-computer-windows.exe
+
+      - name: Info
+        shell: bash
+        working-directory: package
+        run: aux4 computer win info | jq . && aux4 computer win permissions | jq . && aux4 computer win screen | jq -c .
+
+      - name: Package tests
+        shell: bash
+        working-directory: package
+        run: aux4 test run
+
+      - name: Conformance (aux4/computer)
+        shell: bash
+        working-directory: package
+        run: aux4 computer conformance --provider win
+
+  test-live:
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows Server: classic Win32 Calculator (win32calc) and Notepad
+          - os: windows-latest
+            arch: amd64
+          # Windows 11: UWP Calculator and the new Notepad
+          - os: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: package/dist
+
+      - name: Install aux4
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=$(basename "$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/aux4/aux4/releases/latest)")
+          TMP=$(mktemp -d)
+          curl -fsSL -o "$TMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_${{ matrix.arch }}_aux4_aux4_${TAG#v}.zip"
+          mkdir -p "$HOME/.aux4.config/packages"
+          unzip -o -q "$TMP/aux4.zip" -d "$HOME/.aux4.config/packages"
+          cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+
+      - name: Link binary
+        shell: bash
+        run: cp package/dist/windows/${{ matrix.arch }}/aux4-computer-windows.exe package/aux4-computer-windows.exe
+
+      - name: Live UI test
+        shell: bash
+        working-directory: package
+        env:
+          ARTIFACTS: ${{ runner.temp }}/live
+        run: |
+          set -euo pipefail
+          A="$ARTIFACTS"; mkdir -p "$A"
+          cw() { aux4 computer win "$@"; }
+          # check NAME FILTER: keep stdin as $A/NAME.json and assert the jq filter on it
+          check() {
+            local name="$1" filter="$2"
+            cat > "$A/$name.json"
+            if ! jq -e "$filter" "$A/$name.json" > /dev/null; then
+              echo "::error::$name: expected $filter, got: $(cat "$A/$name.json")"
+              exit 1
+            fi
+            echo "ok $name"
+          }
+          cw permissions | tee "$A/permissions.json" | jq -c .
+          jq -e '.desktop.granted == true' "$A/permissions.json" > /dev/null || { echo "::error::no interactive desktop on this runner"; exit 1; }
+
+          # ---------------- Calculator: 256 x 7 through background Invoke ----------------
+          cw open calc --wait 20s | tee "$A/open-calc.json" | jq -c .
+          cw wait --app Calculator --timeout 20s > /dev/null
+          sleep 2
+          cw window list Calculator | tee "$A/calc-windows.json" | jq -c '[.windows[] | {index, title, class, frame}]'
+          cw find "" --role Button --app Calculator | jq -c '[.matches[] | {label, automationId, ref}]' > "$A/calc-buttons.json"
+          echo "Calculator buttons: $(jq -c '[.[] | .label]' "$A/calc-buttons.json")"
+          # UWP Calculator has automation ids (num2Button...); the classic one has labels only.
+          press() {
+            local REF=""
+            for cand in "$@"; do
+              REF=$(jq -r --arg c "$cand" '[.[] | select(.automationId == $c or ((.label // "") | ascii_downcase) == ($c | ascii_downcase))][0].ref // empty' "$A/calc-buttons.json")
+              [ -n "$REF" ] && break
+            done
+            if [ -z "$REF" ]; then echo "::error::no Calculator button for: $*"; exit 1; fi
+            cw click --element "$REF" --app Calculator --mode background >> "$A/calc-clicks.jsonl"
+            sleep 0.3
+          }
+          CURSOR_BEFORE=$(cw cursor | jq -c .)
+          FG_BEFORE=$(cw apps | jq -c '[.apps[] | select(.active) | .name]')
+          press clearButton Clear C
+          for k in "num2Button|2|Two" "num5Button|5|Five" "num6Button|6|Six" "multiplyButton|Multiply|Multiply by|*" "num7Button|7|Seven"; do
+            IFS='|' read -ra C <<< "$k"; press "${C[@]}"
+          done
+          cw wait --app Calculator --text 1792 --timeout 10s > "$A/wait-1792.json" 2> "$A/wait-1792.err" &
+          WAIT_PID=$!
+          sleep 1.5
+          press equalButton Equals "="
+          WAIT_RC=0; wait "$WAIT_PID" || WAIT_RC=$?
+          cat "$A/wait-1792.json" "$A/wait-1792.err"
+          [ "$WAIT_RC" = "0" ] || { echo "::error::wait --text 1792 did not see the result"; exit 1; }
+          jq -e '.waited >= 1 and (.matches | length > 0)' "$A/wait-1792.json" > /dev/null || { echo "::error::wait returned before the result was shown"; exit 1; }
+          jq -s -e 'all(.[]; .mode == "background")' "$A/calc-clicks.jsonl" > /dev/null || { echo "::error::a Calculator click was not background: $(cat "$A/calc-clicks.jsonl")"; exit 1; }
+          echo "click methods: $(jq -s -c '[.[].action] | unique' "$A/calc-clicks.jsonl")"
+          [ "$(cw cursor | jq -c .)" = "$CURSOR_BEFORE" ] || { echo "::error::background clicks moved the cursor"; exit 1; }
+          [ "$(cw apps | jq -c '[.apps[] | select(.active) | .name]')" = "$FG_BEFORE" ] || { echo "::error::background clicks changed the foreground app ($FG_BEFORE -> $(cw apps | jq -c '[.apps[] | select(.active) | .name]'))"; exit 1; }
+
+          # find and ocr agree on where the result is
+          RESULT=$(cw find "1,792" --app Calculator)
+          echo "$RESULT" | jq -e '.matches | length > 0' > /dev/null || RESULT=$(cw find "1792" --app Calculator)
+          echo "$RESULT" | check find-1792 '.matches | length > 0'
+          OCR=$(cw ocr --app Calculator --text 1792)
+          echo "$OCR" | jq -c '{source, method, language, matches: [.matches[] | {text, center, windowCenter}]}'
+          echo "$OCR" | check ocr-1792 '.matches | length > 0'
+          jq -n --slurpfile f "$A/find-1792.json" --slurpfile o "$A/ocr-1792.json" '
+            ($f[0].matches | map(select(.frame.width > 0)) | last) as $e | ($o[0].matches[0].match // $o[0].matches[0]) as $m |
+            {element: $e.frame, ocr: $m.center,
+             inside: ($m.center.x >= $e.frame.x and $m.center.x <= $e.frame.x + $e.frame.width and $m.center.y >= $e.frame.y and $m.center.y <= $e.frame.y + $e.frame.height)}' | check find-ocr-agree '.inside'
+          cw wait --app Calculator --text 1792 --source ocr --timeout 15s | check wait-ocr '.source == "ocr" and (.matches | length > 0)'
+          if cw wait --app Calculator --text 1792 --gone true --timeout 1s 2> /dev/null; then echo "::error::wait --gone reported the shown result as gone"; exit 1; fi
+
+          # screenshot --annotate: a mark's ref presses the right button
+          cw screenshot --app Calculator --annotate true --output "$A/calc-annotated.png" | check annotate '.annotated and (.marks | length > 5) and .width > 0'
+          press clearButton Clear C
+          MARK=$(jq -r '[.marks[] | select(.label == "7" or .label == "Seven")][0].ref // empty' "$A/annotate.json")
+          [ -n "$MARK" ] || { echo "::error::no mark for 7: $(jq -c '[.marks[].label]' "$A/annotate.json")"; exit 1; }
+          cw click --element "$MARK" --app Calculator | check click-mark '.mode == "background"'
+          cw wait --app Calculator --text 7 --source ax --timeout 5s | check mark-pressed '.matches | length > 0'
+
+          # click by window coordinates (the windowCenter of a button), in the background
+          EIGHT=$(cw find "" --role Button --app Calculator | jq -c '[.matches[] | select(.label == "8" or .label == "Eight" or .automationId == "num8Button")][0]')
+          WX=$(echo "$EIGHT" | jq '.windowCenter.x'); WY=$(echo "$EIGHT" | jq '.windowCenter.y')
+          cw click --app Calculator --x "$WX" --y "$WY" | check click-xy '.mode == "background"'
+          cw wait --app Calculator --text 78 --source ax --timeout 5s | check xy-pressed '.matches | length > 0'
+
+          # ---------------- Notepad: type / select / set / clipboard / menu / window ----------------
+          cw open notepad --wait 15s | tee "$A/open-notepad.json" | jq -c .
+          sleep 1
+          cw state --app notepad | tee "$A/notepad-state.json" | jq -c '{app, windows: [.windows[] | {title, class}], focused: .focused.role, elements: [.elements[] | {role, label}][:12]}'
+          cw type "Hello from aux4" --app notepad | check type '.mode == "background" and .typed == 15'
+          echo "type method: $(jq -r .method "$A/type.json")"
+          cw wait --app notepad --text "Hello from aux4" --source ax --timeout 5s | check type-landed '.matches | length > 0'
+          cw select --app notepad --text aux4 | check select '.mode == "background" and .selected == "aux4" and .range.start == 11'
+          cw clipboard copy --app notepad | check copy '.text == "aux4"'
+          cw clipboard read | check clipboard-read '.text == "aux4"'
+          cw clipboard paste --text " pasted" --app notepad | check paste '.mode == "background"'
+          EDIT=$(jq -r '[.elements[] | select(.role == "Edit" or .role == "Document")][0].ref // empty' "$A/notepad-state.json")
+          [ -n "$EDIT" ] || EDIT=$(cw find "" --role Edit --app notepad | jq -r '.matches[0].ref // empty')
+          [ -n "$EDIT" ] || EDIT=$(cw find "" --role Document --app notepad | jq -r '.matches[0].ref // empty')
+          cw set --app notepad --element "$EDIT" --value "Set by aux4/computer-windows CI" | check set '.mode == "background" and (.after | tostring | test("Set by aux4/computer-windows CI"))'
+          cw menu --app notepad | tee "$A/notepad-menu.json" | jq -c '{source, menus: [.menus[] | .title]}'
+          cw shortcut ctrl+a --app notepad | check shortcut-ctrl-a '.mode == "background"'
+
+          cw window move --app notepad --x 120 --y 90 | check window-move '.after.frame.x == 120 and .after.frame.y == 90 and .mode == "background"'
+          cw window resize --app notepad --width 640 --height 480 | check window-resize '.after.frame.width == 640 and .after.frame.height == 480'
+          cw window list notepad | check window-readback '[.windows[] | select(.frame.x == 120 and .frame.y == 90 and .frame.width == 640 and .frame.height == 480)] | length == 1'
+          cw window minimize --app notepad | check window-minimize '.after.minimized == true and .mode == "background"'
+          cw window restore --app notepad | check window-restore '.after.minimized == false'
+          cw hide notepad | check hide '.hidden == true and .changed == true'
+          cw unhide notepad | check unhide '.hidden == false and .changed == true'
+
+          # unsaved-changes dialog (CI only): close, read the dialog, answer Don't Save
+          cw window close --app notepad | tee "$A/close.json" | jq -c .
+          if jq -e '.dialog != null' "$A/close.json" > /dev/null; then
+            cw dialog --app notepad | check dialog '.dialog.buttons | map(.title) | index("Don'"'"'t Save") != null'
+            cw dialog --app notepad --press "Don't Save" | check dialog-press '.closed == true and .mode == "background"'
+          else
+            echo "::notice::Notepad closed without asking (Windows 11 Notepad keeps unsaved tabs): $(cat "$A/close.json")"
+          fi
+          for i in $(seq 1 30); do [ "$(cw apps | jq '[.apps[] | select(.name | ascii_downcase == "notepad")] | length')" = "0" ] && break; sleep 0.3; done
+
+          # ---------------- stop switch + log ----------------
+          export AUX4_COMPUTER_STATE_DIR="$A/state"
+          cw stop | check stop '.stopped == true'
+          if cw click --app Calculator --x 10 --y 10 2> "$A/stopped.err"; then echo "::error::click ran while stopped"; exit 1; fi
+          jq -e '.stopped == true' "$A/stopped.err" > /dev/null
+          cw resume | check resume '.stopped == false'
+          cw log | check log '[.entries[].command] == ["stop", "click", "resume"]'
+          unset AUX4_COMPUTER_STATE_DIR
+
+          # ---------------- quit ----------------
+          cw quit Calculator --timeout 10s | check quit '.terminated == true'
+
+      - name: Capture screenshots
+        if: always()
+        shell: bash
+        working-directory: package
+        run: |
+          mkdir -p "$RUNNER_TEMP/live"
+          aux4 computer win screenshot --output "$RUNNER_TEMP/live/screen-final.png" || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-${{ matrix.os }}
+          path: ${{ runner.temp }}/live

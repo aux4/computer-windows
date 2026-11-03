@@ -1,0 +1,1315 @@
+{
+  "scope": "aux4",
+  "name": "computer-windows",
+  "version": "0.1.0",
+  "description": "Computer-use for AI agents on Windows (aux4/computer provider 'win'): UI Automation tree, background clicks and typing, screenshots of covered windows, OCR, menus, dialogs, clipboard and window control",
+  "license": "Apache-2.0",
+  "tags": [
+    "aux4",
+    "windows",
+    "computer-use",
+    "ui-automation",
+    "automation",
+    "agent"
+  ],
+  "dependencies": [
+    "aux4/computer"
+  ],
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "computer",
+          "execute": [
+            "profile:computer"
+          ],
+          "help": {
+            "text": "Computer-use commands for AI agents"
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer",
+      "commands": [
+        {
+          "name": "win",
+          "execute": [
+            "profile:computer:win"
+          ],
+          "help": {
+            "text": "Operate this Windows desktop: screenshot, read, click, type, shortcuts, clipboard, apps/windows"
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer:win",
+      "commands": [
+        {
+          "name": "info",
+          "execute": [
+            "${packageDir}/aux4-computer-windows info ${packageDir}"
+          ],
+          "help": {
+            "text": "Describe this provider for aux4/computer: name (win), contract version, platform, version, capabilities and permissions"
+          }
+        },
+        {
+          "name": "notes",
+          "execute": [
+            "${packageDir}/aux4-computer-windows notes ${packageDir}"
+          ],
+          "help": {
+            "text": "Print the Windows specifics for agents (markdown): what runs in the background, UIPI/elevation, coordinates, gotchas"
+          }
+        },
+        {
+          "name": "permissions",
+          "execute": [
+            "${packageDir}/aux4-computer-windows permissions"
+          ],
+          "help": {
+            "text": "Report what this process can reach: interactive desktop, elevation (UIPI) and uiAccess"
+          }
+        },
+        {
+          "name": "screenshot",
+          "execute": [
+            "${packageDir}/aux4-computer-windows screenshot values(output, display, app, maxWidth, annotate, roles, limit)"
+          ],
+          "help": {
+            "text": "Capture a screenshot (PNG) of a display or a specific app's window",
+            "variables": [
+              {
+                "name": "output",
+                "text": "File path to save the PNG to (defaults to a temp file)",
+                "default": ""
+              },
+              {
+                "name": "display",
+                "text": "Display index to capture (from 'computer win screen')",
+                "default": "0"
+              },
+              {
+                "name": "app",
+                "text": "Capture this app's main window (even when covered by other windows) instead of a display",
+                "default": ""
+              },
+              {
+                "name": "maxWidth",
+                "text": "Resize down if wider than this (image pixels), preserving aspect ratio",
+                "default": "1568"
+              },
+              {
+                "name": "annotate",
+                "text": "Draw a numbered box on each element (set-of-marks) and return the marks: number, ref, role, label, frame, center, windowCenter",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              },
+              {
+                "name": "roles",
+                "text": "With --annotate: actionable (default: buttons, links, fields, checkboxes, menu items, combo boxes, tabs, list items) or all (also text, images, headers)",
+                "default": "actionable",
+                "options": [
+                  "actionable",
+                  "all"
+                ]
+              },
+              {
+                "name": "limit",
+                "text": "With --annotate: most marks to draw (the rest are reported as truncated)",
+                "default": "150"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ocr",
+          "execute": [
+            "${packageDir}/aux4-computer-windows ocr values(app, image, text, level, languages, mode, scale, timeout)"
+          ],
+          "help": {
+            "text": "Recognize text (Windows.Media.Ocr) on the screen, an app's window or a PNG, with positions in click coordinates",
+            "variables": [
+              {
+                "name": "app",
+                "text": "Read this app's main window (even when covered by other windows); positions are also given relative to it as windowCenter, the space 'click --app' uses",
+                "default": ""
+              },
+              {
+                "name": "image",
+                "text": "Recognize an existing PNG instead of capturing the screen",
+                "default": ""
+              },
+              {
+                "name": "text",
+                "text": "Only return lines containing this text (case-insensitive); each line also gets a 'match' with the position of just that text",
+                "default": ""
+              },
+              {
+                "name": "level",
+                "text": "accurate (default) or fast; Windows OCR has a single level, both run it",
+                "default": "accurate",
+                "options": [
+                  "accurate",
+                  "fast"
+                ]
+              },
+              {
+                "name": "languages",
+                "text": "Comma-separated OCR languages in priority order, e.g. en-US,pt-BR (default: the user's profile languages; each needs its Windows OCR language feature)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): capture in the background, restoring a minimized window without activating it; background: error if the window is minimized; foreground: same as auto",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              },
+              {
+                "name": "scale",
+                "text": "With --image: image pixels per logical pixel (the 'scale' from 'screenshot'), so positions come out in logical pixels",
+                "default": "1"
+              },
+              {
+                "name": "timeout",
+                "text": "Give up with a JSON error after this long, e.g. 30s, 2m (default 60s)",
+                "default": "60s"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wait",
+          "execute": [
+            "${packageDir}/aux4-computer-windows wait values(text, role, app, gone, source, timeout, interval)"
+          ],
+          "help": {
+            "text": "Wait until text, an element or an app window appears (or is gone), checking UI Automation first, then OCR",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to wait for in element names/values or on the pixels (ignores case, whitespace and commas, so 1792 matches 1,792)",
+                "default": "",
+                "arg": true
+              },
+              {
+                "name": "role",
+                "text": "Only elements with this UI Automation control type, e.g. Button; UI Automation only (macOS names like AXButton are accepted)",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App to watch (defaults to the foreground app / the main display); alone, wait until it is running with an on-screen window",
+                "default": ""
+              },
+              {
+                "name": "gone",
+                "text": "true: wait until the text, element or app window is no longer there",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              },
+              {
+                "name": "source",
+                "text": "auto (default): UI Automation first, OCR of the app window (or screen) when it has no match; ax (UI Automation) or ocr: only that one",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "ax",
+                  "ocr"
+                ]
+              },
+              {
+                "name": "timeout",
+                "text": "How long to wait before failing, e.g. 500ms, 10s, 2m",
+                "default": "10s"
+              },
+              {
+                "name": "interval",
+                "text": "Pause between checks, e.g. 250ms, 1s (checks never overlap)",
+                "default": "500ms"
+              }
+            ]
+          }
+        },
+        {
+          "name": "read",
+          "execute": [
+            "${packageDir}/aux4-computer-windows read values(app, depth)"
+          ],
+          "help": {
+            "text": "Read the UI Automation tree (control view) of the foreground or named app",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name to read (defaults to the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "depth",
+                "text": "Maximum tree depth to walk",
+                "default": "10"
+              }
+            ]
+          }
+        },
+        {
+          "name": "find",
+          "execute": [
+            "${packageDir}/aux4-computer-windows find values(text, role, app)"
+          ],
+          "help": {
+            "text": "Find UI elements by text and/or role",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to search for in element label/value",
+                "default": "",
+                "arg": true
+              },
+              {
+                "name": "role",
+                "text": "Filter by UI Automation control type, e.g. Button (macOS names like AXButton are accepted)",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App to search (defaults to the foreground app)",
+                "default": ""
+              }
+            ]
+          }
+        },
+        {
+          "name": "click",
+          "execute": [
+            "${packageDir}/aux4-computer-windows click values(x, y, button, count, element, app, mode)"
+          ],
+          "help": {
+            "text": "Click at coordinates or press an element; in the background (UI Automation) by default",
+            "variables": [
+              {
+                "name": "x",
+                "text": "X coordinate: relative to the app's window with --app (same as 'screenshot --app'), screen logical pixels without",
+                "default": ""
+              },
+              {
+                "name": "y",
+                "text": "Y coordinate: relative to the app's window with --app (same as 'screenshot --app'), screen logical pixels without",
+                "default": ""
+              },
+              {
+                "name": "button",
+                "text": "left or right",
+                "default": "left"
+              },
+              {
+                "name": "count",
+                "text": "Click count (2 for double-click)",
+                "default": "1"
+              },
+              {
+                "name": "element",
+                "text": "Element ref from 'read'/'find'/'state' to press instead of x/y",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "Target app; x/y become relative to its window (default: the foreground app, screen logical pixels)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "move",
+          "execute": [
+            "${packageDir}/aux4-computer-windows move values(x, y)"
+          ],
+          "help": {
+            "text": "Move the mouse cursor to screen coordinates (always real input)",
+            "variables": [
+              {
+                "name": "x",
+                "text": "X coordinate in screen logical pixels",
+                "default": ""
+              },
+              {
+                "name": "y",
+                "text": "Y coordinate in screen logical pixels",
+                "default": ""
+              }
+            ]
+          }
+        },
+        {
+          "name": "drag",
+          "execute": [
+            "${packageDir}/aux4-computer-windows drag values(x, y, toX, toY)"
+          ],
+          "help": {
+            "text": "Drag the mouse from one point to another (always real input)",
+            "variables": [
+              {
+                "name": "x",
+                "text": "Start X coordinate",
+                "default": ""
+              },
+              {
+                "name": "y",
+                "text": "Start Y coordinate",
+                "default": ""
+              },
+              {
+                "name": "toX",
+                "text": "End X coordinate",
+                "default": ""
+              },
+              {
+                "name": "toY",
+                "text": "End Y coordinate",
+                "default": ""
+              }
+            ]
+          }
+        },
+        {
+          "name": "type",
+          "execute": [
+            "${packageDir}/aux4-computer-windows type values(text, delay, app, mode)"
+          ],
+          "help": {
+            "text": "Type unicode-safe text into the focused text field of an app; in the background by default",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to type",
+                "arg": true
+              },
+              {
+                "name": "delay",
+                "text": "Milliseconds to wait before typing (e.g. for a panel to appear)",
+                "default": "0"
+              },
+              {
+                "name": "app",
+                "text": "App to type into (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "shortcut",
+          "execute": [
+            "${packageDir}/aux4-computer-windows shortcut values(keys, delay, app, mode)"
+          ],
+          "help": {
+            "text": "Press a keyboard shortcut, e.g. ctrl+shift+s",
+            "variables": [
+              {
+                "name": "keys",
+                "text": "Key combo, e.g. 'ctrl+c', 'ctrl+shift+s', 'alt+f4', 'enter', 'escape' (cmd is read as ctrl)",
+                "arg": true
+              },
+              {
+                "name": "delay",
+                "text": "Milliseconds to wait before pressing",
+                "default": "0"
+              },
+              {
+                "name": "app",
+                "text": "Send the shortcut to this app (background when possible: its menu item, or the text field's own command); without it the shortcut is real input to the foreground window",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "scroll",
+          "execute": [
+            "${packageDir}/aux4-computer-windows scroll values(x, y, dx, dy, app, mode)"
+          ],
+          "help": {
+            "text": "Scroll at a position in an app; in the background (UI Automation scroll pattern) by default",
+            "variables": [
+              {
+                "name": "x",
+                "text": "X coordinate to scroll at: relative to the app's window with --app, screen logical pixels without",
+                "default": ""
+              },
+              {
+                "name": "y",
+                "text": "Y coordinate to scroll at: relative to the app's window with --app, screen logical pixels without",
+                "default": ""
+              },
+              {
+                "name": "dx",
+                "text": "Horizontal scroll delta in pixels",
+                "default": "0"
+              },
+              {
+                "name": "dy",
+                "text": "Vertical scroll delta in pixels",
+                "default": "0"
+              },
+              {
+                "name": "app",
+                "text": "App to scroll (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cursor",
+          "execute": [
+            "${packageDir}/aux4-computer-windows cursor"
+          ],
+          "help": {
+            "text": "Get the current mouse cursor position"
+          }
+        },
+        {
+          "name": "screen",
+          "execute": [
+            "${packageDir}/aux4-computer-windows screen"
+          ],
+          "help": {
+            "text": "List displays with bounds (logical pixels) and scale factor"
+          }
+        },
+        {
+          "name": "apps",
+          "execute": [
+            "${packageDir}/aux4-computer-windows apps"
+          ],
+          "help": {
+            "text": "List running applications"
+          }
+        },
+        {
+          "name": "windows",
+          "execute": [
+            "${packageDir}/aux4-computer-windows windows"
+          ],
+          "help": {
+            "text": "List on-screen windows"
+          }
+        },
+        {
+          "name": "window",
+          "execute": [
+            "profile:computer:win:window"
+          ],
+          "help": {
+            "text": "List, move, resize, minimize, restore, close, maximize or raise an app's windows (in the background, except raise)"
+          }
+        },
+        {
+          "name": "quit",
+          "execute": [
+            "${packageDir}/aux4-computer-windows quit values(app, force, timeout)"
+          ],
+          "help": {
+            "text": "Quit an app by closing its windows (reports a 'save changes?' dialog instead of quitting); --force true kills it",
+            "variables": [
+              {
+                "name": "app",
+                "text": "Application exe name, window title or pid",
+                "arg": true
+              },
+              {
+                "name": "force",
+                "text": "Force-quit with TerminateProcess (unsaved changes are lost)",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              },
+              {
+                "name": "timeout",
+                "text": "How long to wait for the app to exit, e.g. 5s",
+                "default": "5s"
+              }
+            ]
+          }
+        },
+        {
+          "name": "hide",
+          "execute": [
+            "${packageDir}/aux4-computer-windows hide values(app)"
+          ],
+          "help": {
+            "text": "Hide an app: minimize all its windows without activating anything (Windows has no app hide)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "Application exe name, window title or pid",
+                "arg": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "unhide",
+          "execute": [
+            "${packageDir}/aux4-computer-windows unhide values(app)"
+          ],
+          "help": {
+            "text": "Show a hidden (minimized) app's windows again without bringing it to the front",
+            "variables": [
+              {
+                "name": "app",
+                "text": "Application exe name, window title or pid",
+                "arg": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "open",
+          "execute": [
+            "${packageDir}/aux4-computer-windows open values(app, mode, file, url, wait, hidden)"
+          ],
+          "help": {
+            "text": "Open an app, a file or a URL without activating it (by default); optionally wait for its window",
+            "variables": [
+              {
+                "name": "app",
+                "text": "Application exe name, window title or pid (com.apple.TextEdit); optional with --file/--url (their default app is used)",
+                "default": "",
+                "arg": true
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): open without activating, put the foreground window back if the app activates itself; background: same, error if it can't be put back; foreground: open and activate the app",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              },
+              {
+                "name": "file",
+                "text": "File to open (in --app, or its default app)",
+                "default": ""
+              },
+              {
+                "name": "url",
+                "text": "URL to open (in --app, or the default handler), e.g. https://aux4.io",
+                "default": ""
+              },
+              {
+                "name": "wait",
+                "text": "Wait up to this long for the app's window (the file's window with --file) and return its frame, e.g. 10s",
+                "default": ""
+              },
+              {
+                "name": "hidden",
+                "text": "Launch the app minimized, without activating it",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "focus",
+          "execute": [
+            "${packageDir}/aux4-computer-windows focus values(app)"
+          ],
+          "help": {
+            "text": "Bring a running application to the foreground (always foreground)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "Application: exe name, window title or pid",
+                "arg": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "state",
+          "execute": [
+            "${packageDir}/aux4-computer-windows state values(app, depth, limit)"
+          ],
+          "help": {
+            "text": "One-call snapshot: foreground app, the app's windows, focused element, open dialog and a compact tree of its actionable/text elements",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App to describe: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "depth",
+                "text": "Levels of actionable/text elements to include (layout groups don't count; 0 = none)",
+                "default": "3"
+              },
+              {
+                "name": "limit",
+                "text": "Maximum number of elements in the compact tree",
+                "default": "120"
+              }
+            ]
+          }
+        },
+        {
+          "name": "menu",
+          "execute": [
+            "${packageDir}/aux4-computer-windows menu values(app, path, depth, mode)"
+          ],
+          "help": {
+            "text": "List an app's menu bar, or press a menu item by path (e.g. 'File > New'); in the background by default",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose menu bar to use: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "path",
+                "text": "Menu item to press, titles separated by '>' (case-insensitive, '&' mnemonics and trailing '...' optional); omit to list the menu bar",
+                "default": ""
+              },
+              {
+                "name": "depth",
+                "text": "Menu levels to list: 1 = menu titles, 2 = their items (default), 3+ = submenus",
+                "default": "2"
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "select",
+          "execute": [
+            "${packageDir}/aux4-computer-windows select values(app, all, text, occurrence, start, length, element, mode)"
+          ],
+          "help": {
+            "text": "Select text in the focused (or given) text element; in the background",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App to select in: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "all",
+                "text": "Select all the element's text",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              },
+              {
+                "name": "text",
+                "text": "Select this text (case-insensitive)",
+                "default": ""
+              },
+              {
+                "name": "occurrence",
+                "text": "Which match of --text to select (1 = first)",
+                "default": ""
+              },
+              {
+                "name": "start",
+                "text": "Start of the range to select (character offset from 0)",
+                "default": ""
+              },
+              {
+                "name": "length",
+                "text": "Length of the range to select (characters)",
+                "default": ""
+              },
+              {
+                "name": "element",
+                "text": "Text element ref from 'find' or 'state' (default: the app's focused element)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "set",
+          "execute": [
+            "${packageDir}/aux4-computer-windows set values(app, element, value, checked, option, mode)"
+          ],
+          "help": {
+            "text": "Set an element: a text field or slider value, a checkbox state or a combo box / list option; in the background",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App the element belongs to: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "element",
+                "text": "Element ref from 'find' or 'state'",
+                "default": ""
+              },
+              {
+                "name": "value",
+                "text": "New value for a text field, text area, combo box or slider",
+                "default": ""
+              },
+              {
+                "name": "checked",
+                "text": "true or false: press the checkbox/radio button until it is in that state",
+                "default": ""
+              },
+              {
+                "name": "option",
+                "text": "Option to pick in a combo box, list or radio group",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "dialog",
+          "execute": [
+            "${packageDir}/aux4-computer-windows dialog values(app, press, mode)"
+          ],
+          "help": {
+            "text": "Detect an open message box, dialog or save/open panel (kind, title, text, buttons, fields); --press a button by title",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App to check: exe name, window title or pid (default: the foreground app, then system alerts)",
+                "default": ""
+              },
+              {
+                "name": "press",
+                "text": "Button to press, by title (case-insensitive, '&' mnemonics ignored, e.g. \"Don't Save\")",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "log",
+          "execute": [
+            "${packageDir}/aux4-computer-windows log values(limit)"
+          ],
+          "help": {
+            "text": "Show the most recent entries of the shared action log (every input/state command is recorded)",
+            "variables": [
+              {
+                "name": "limit",
+                "text": "Number of recent entries to show",
+                "default": "20"
+              }
+            ]
+          }
+        },
+        {
+          "name": "stop",
+          "execute": [
+            "${packageDir}/aux4-computer-windows stop"
+          ],
+          "help": {
+            "text": "Turn on the shared stop switch: every command that sends input or changes state refuses until 'resume'"
+          }
+        },
+        {
+          "name": "resume",
+          "execute": [
+            "${packageDir}/aux4-computer-windows resume"
+          ],
+          "help": {
+            "text": "Turn off the stop switch so input and state commands work again"
+          }
+        },
+        {
+          "name": "clipboard",
+          "execute": [
+            "profile:computer:win:clipboard"
+          ],
+          "help": {
+            "text": "Clipboard commands (text): copy, paste, read"
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer:win:window",
+      "commands": [
+        {
+          "name": "list",
+          "execute": [
+            "${packageDir}/aux4-computer-windows window list values(app)"
+          ],
+          "help": {
+            "text": "List an app's windows (index, ref, id, title, frame, minimized, maximized, dialog, focused)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose windows to list: exe name, window title or pid (default: the foreground app)",
+                "default": "",
+                "arg": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "move",
+          "execute": [
+            "${packageDir}/aux4-computer-windows window move values(app, title, index, mode) values(x, y)"
+          ],
+          "help": {
+            "text": "Move a window so its top-left corner is at --x/--y (logical pixels); returns the frame before and after",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title (exact, then contained; case-insensitive); default: the app's main window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from 'window list' (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "x",
+                "text": "Screen x of the window's top-left corner, logical pixels (negative: --x=-100)",
+                "default": ""
+              },
+              {
+                "name": "y",
+                "text": "Screen y of the window's top-left corner",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to bringing the app forward only if that isn't possible; background: never fall back (error instead); foreground: bring the app forward first",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "resize",
+          "execute": [
+            "${packageDir}/aux4-computer-windows window resize values(app, title, index, mode) values(width, height)"
+          ],
+          "help": {
+            "text": "Resize a window to --width/--height (logical pixels; give one to keep the other); returns the frame before and after",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title (exact, then contained; case-insensitive); default: the app's main window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from 'window list' (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "width",
+                "text": "New width in logical pixels (default: keep)",
+                "default": ""
+              },
+              {
+                "name": "height",
+                "text": "New height in logical pixels (default: keep)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to bringing the app forward only if that isn't possible; background: never fall back (error instead); foreground: bring the app forward first",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "minimize",
+          "execute": [
+            "${packageDir}/aux4-computer-windows window minimize values(app, title, index, mode)"
+          ],
+          "help": {
+            "text": "Minimize a window to the taskbar (without activating anything)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title (exact, then contained; case-insensitive); default: the app's main window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from 'window list' (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to bringing the app forward only if that isn't possible; background: never fall back (error instead); foreground: bring the app forward first",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "restore",
+          "execute": [
+            "${packageDir}/aux4-computer-windows window restore values(app, title, index, mode)"
+          ],
+          "help": {
+            "text": "Restore a minimized window (without activating it)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title (exact, then contained; case-insensitive); default: the app's main window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from 'window list' (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to bringing the app forward only if that isn't possible; background: never fall back (error instead); foreground: bring the app forward first",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "close",
+          "execute": [
+            "${packageDir}/aux4-computer-windows window close values(app, title, index, mode)"
+          ],
+          "help": {
+            "text": "Close a window (WM_CLOSE); reports the 'save changes?' dialog if the app asks",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title (exact, then contained; case-insensitive); default: the app's main window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from 'window list' (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to bringing the app forward only if that isn't possible; background: never fall back (error instead); foreground: bring the app forward first",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fullscreen",
+          "execute": [
+            "${packageDir}/aux4-computer-windows window fullscreen values(app, title, index, mode) values(enabled)"
+          ],
+          "help": {
+            "text": "Maximize (enabled true) or restore (false) a window; Windows has no per-app full screen",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title (exact, then contained; case-insensitive); default: the app's main window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from 'window list' (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "enabled",
+                "text": "true to maximize, false to restore",
+                "default": "true",
+                "arg": true,
+                "options": [
+                  "true",
+                  "false"
+                ]
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to bringing the app forward only if that isn't possible; background: never fall back (error instead); foreground: bring the app forward first",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "raise",
+          "execute": [
+            "${packageDir}/aux4-computer-windows window raise values(app, title, index, mode)"
+          ],
+          "help": {
+            "text": "Raise a window and bring its app to the front (always foreground)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use: exe name, window title or pid (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title (exact, then contained; case-insensitive); default: the app's main window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from 'window list' (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default) or foreground; background is refused (raising is foreground by nature)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer:win:clipboard",
+      "commands": [
+        {
+          "name": "copy",
+          "execute": [
+            "${packageDir}/aux4-computer-windows clipboard-copy values(text, app, mode)"
+          ],
+          "help": {
+            "text": "Copy to the clipboard: with --text, write it directly; without, copy the app's current selection (background by default) and return it",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to put on the clipboard; omit to copy the current selection (ctrl+c)",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App whose selection to copy (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "paste",
+          "execute": [
+            "${packageDir}/aux4-computer-windows clipboard-paste values(text, app, mode)"
+          ],
+          "help": {
+            "text": "Paste the clipboard into the focused element of an app (background by default); with --text, write it to the clipboard first",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to put on the clipboard before pasting; omit to paste the current clipboard contents",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App to paste into (default: the foreground app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (default): act in the background, fall back to real input only if that isn't possible; background: never fall back (error instead); foreground: always use real input",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "read",
+          "execute": [
+            "${packageDir}/aux4-computer-windows clipboard-read"
+          ],
+          "help": {
+            "text": "Read the current clipboard text (no side effects)"
+          }
+        }
+      ]
+    }
+  ]
+}

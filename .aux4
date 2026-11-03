@@ -1,0 +1,64 @@
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "build",
+          "execute": [
+            "aux4 builder all"
+          ],
+          "help": {
+            "text": "Build the binaries for all platforms (on Windows)"
+          }
+        },
+        {
+          "name": "builder",
+          "execute": [
+            "profile:builder"
+          ],
+          "help": {
+            "text": "build the app"
+          }
+        }
+      ]
+    },
+    {
+      "name": "builder",
+      "commands": [
+        {
+          "name": "windows",
+          "execute": [
+            "mkdir -p package/dist/windows/amd64 package/dist/windows/arm64",
+            "cargo build --release --target x86_64-pc-windows-msvc",
+            "cargo build --release --target aarch64-pc-windows-msvc",
+            "cp target/x86_64-pc-windows-msvc/release/aux4-computer-windows.exe package/dist/windows/amd64/aux4-computer-windows.exe",
+            "cp target/aarch64-pc-windows-msvc/release/aux4-computer-windows.exe package/dist/windows/arm64/aux4-computer-windows.exe"
+          ],
+          "help": {
+            "text": "build the app for windows (amd64 + arm64; needs the MSVC toolchain, run on Windows)"
+          }
+        },
+        {
+          "name": "local",
+          "execute": [
+            "cargo build --release",
+            "ln -sf ../target/release/aux4-computer-windows package/aux4-computer-windows"
+          ],
+          "help": {
+            "text": "build for this machine and link it into package/ (runs the platform-independent tests on macOS/Linux)"
+          }
+        },
+        {
+          "name": "all",
+          "execute": [
+            "aux4 builder windows"
+          ],
+          "help": {
+            "text": "build the app for all platforms"
+          }
+        }
+      ]
+    }
+  ]
+}
