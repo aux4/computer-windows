@@ -104,50 +104,38 @@ jobs:
           registry: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || '' }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  # The published package downloads from the hub it went to and runs on Windows. pkger can't
-  # install itself on Windows yet, so this takes the same platform zip pkger would download
-  # and loads it through AUX4_AUX4_FILES.
+  # The published package, downloaded from the hub it went to (the Windows zip pkger would
+  # install; pkger can't install itself on Windows yet), runs on Windows: ci/installed.test.md.
   verify-install:
     needs: [publish]
     runs-on: windows-latest
     env:
-      # aux4 runs command lines with $SHELL (default /bin/sh, which doesn't exist on Windows)
       SHELL: bash
-      HUB: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io' || 'https://api.hub.aux4.io' }}
+      ComSpec: C:\Program Files\Git\bin\bash.exe
     steps:
-      - name: Download aux4 and the published package
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install aux4
         shell: bash
         run: |
-          set -euo pipefail
           TAG=$(basename "$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/aux4/aux4/releases/latest)")
-          TMP=$(mktemp -d)
-          curl -fsSL -o "$TMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_amd64_aux4_aux4_${TAG#v}.zip"
-          P="$HOME/.aux4.config/packages"
-          mkdir -p "$P"
-          unzip -o -q "$TMP/aux4.zip" -d "$P"
-          export PATH="$P/aux4/aux4:$PATH"
-          cygpath -w "$P/aux4/aux4" >> "$GITHUB_PATH"
-          UA="$(aux4 aux4 version --system)"
-          VERSION="${{ needs.publish.outputs.version }}"
-          curl -fsSL -H "User-Agent: $UA" -o "$TMP/pkg.zip" "$HUB/v1/packages/public/aux4/computer-windows/${VERSION}?download=true"
-          curl -fsSL -H "User-Agent: $UA" -o "$TMP/computer.zip" "$HUB/v1/packages/public/aux4/computer/latest?download=true"
-          unzip -o -q "$TMP/pkg.zip" -d "$P"
-          unzip -o -q "$TMP/computer.zip" -d "$P"
-          ls -la "$P/aux4/computer-windows"
-          for f in "$P/aux4/computer/.aux4"; do
-            jq '(.. | strings) |= gsub("(?<![\"])\\$\\{packageDir\\}(?<rest>[^ \"]*)"; "\"${packageDir}\(.rest)\"")' "$f" > "$f.new" && mv "$f.new" "$f"
-          done
-          echo "AUX4_AUX4_FILES=$(cygpath -w "$P/aux4/computer/.aux4");$(cygpath -w "$P/aux4/computer-windows/.aux4")" >> "$GITHUB_ENV"
+          curl -fsSL -o "$RUNNER_TEMP/aux4.zip" "https://github.com/aux4/aux4/releases/download/${TAG}/windows_amd64_aux4_aux4_${TAG#v}.zip"
+          mkdir -p "$HOME/.aux4.config/packages" && unzip -o -q "$RUNNER_TEMP/aux4.zip" -d "$HOME/.aux4.config/packages"
+          cygpath -w "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+
+      - name: Install jest
+        shell: bash
+        run: npm i -g jest
+
+      - name: Load aux4/test and aux4/computer
+        shell: bash
+        run: aux4 ci windows-packages --computerHub ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io' || 'https://api.hub.aux4.io' }}
+
+      - name: Download the published package
+        shell: bash
+        run: aux4 ci installed-package --version ${{ needs.publish.outputs.version }} --hub ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io' || 'https://api.hub.aux4.io' }}
 
       - name: Run it
         shell: bash
-        run: |
-          set -euo pipefail
-          cd "$RUNNER_TEMP"
-          aux4 computer win info | tee info.json | jq -c '{provider, contract, platform, version}'
-          jq -e '.provider == "win" and .contract == 1 and .version == "${{ needs.publish.outputs.version }}"' info.json > /dev/null
-          aux4 computer providers | jq -c . || true
-          aux4 computer win open notepad --wait 15s | jq -c '{app, mode, window: .window.title}'
-          aux4 computer win type "installed from the hub" --app notepad | jq -e '.mode == "background"'
-          aux4 computer win wait --app notepad --text "installed from the hub" --source ax --timeout 5s | jq -c '{source, waited}'
-          aux4 computer win quit notepad --force true | jq -c '{terminated}'
+        run: mkdir -p "$RUNNER_TEMP/verify" && cp ci/installed.test.md "$RUNNER_TEMP/verify/" && cd "$RUNNER_TEMP/verify" && aux4 test run

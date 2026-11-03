@@ -20,6 +20,15 @@
           "help": {
             "text": "build the app"
           }
+        },
+        {
+          "name": "ci",
+          "execute": [
+            "profile:ci"
+          ],
+          "help": {
+            "text": "CI setup on hosted Windows runners"
+          }
         }
       ]
     },
@@ -56,6 +65,92 @@
           ],
           "help": {
             "text": "build the app for all platforms"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ci",
+      "commands": [
+        {
+          "name": "windows-packages",
+          "execute": [
+            "mkdir -p \"$HOME/.aux4.config/packages\"",
+            "curl -fsSL -H \"User-Agent: $(aux4 aux4 version --system)\" -o \"$RUNNER_TEMP/aux4-test.zip\" \"https://api.hub.aux4.io/v1/packages/public/aux4/test/latest?download=true\"",
+            "curl -fsSL -H \"User-Agent: $(aux4 aux4 version --system)\" -o \"$RUNNER_TEMP/aux4-computer.zip\" \"${computerHub}/v1/packages/public/aux4/computer/latest?download=true\"",
+            "unzip -o -q \"$RUNNER_TEMP/aux4-test.zip\" -d \"$HOME/.aux4.config/packages\"",
+            "unzip -o -q \"$RUNNER_TEMP/aux4-computer.zip\" -d \"$HOME/.aux4.config/packages\"",
+            "aux4 ci quote-package-dir --file \"$HOME/.aux4.config/packages/aux4/test/.aux4\"",
+            "aux4 ci quote-package-dir --file \"$HOME/.aux4.config/packages/aux4/computer/.aux4\"",
+            "sed -i \"s#e.spawn(\\\"jest\\\",\\[#e.spawn(process.execPath,[\\\"$(cygpath -m \"$(npm root -g)\")/jest/bin/jest.js\\\",#\" \"$HOME/.aux4.config/packages/aux4/test/lib/aux4-test.js\"",
+            "echo \"AUX4_AUX4_FILES=$(cygpath -w \"$HOME/.aux4.config/packages/aux4/test/.aux4\");$(cygpath -w \"$HOME/.aux4.config/packages/aux4/computer/.aux4\")\" >> \"$GITHUB_ENV\"",
+            "jq -r \".name + \\\" \\\" + .version\" \"$HOME/.aux4.config/packages/aux4/test/.aux4\" \"$HOME/.aux4.config/packages/aux4/computer/.aux4\""
+          ],
+          "help": {
+            "text": "Load aux4/test and aux4/computer on a Windows runner without pkger (it can't install itself on Windows yet): download the hub's Windows zips, quote ${packageDir} in their command lines (aux4 injects it with backslashes), run jest through node, and export AUX4_AUX4_FILES",
+            "variables": [
+              {
+                "name": "computerHub",
+                "text": "Hub API to take aux4/computer from (the dev hub until it is promoted)",
+                "default": "https://dev.api.hub.aux4.io"
+              }
+            ]
+          }
+        },
+        {
+          "name": "quote-package-dir",
+          "execute": [
+            "jq '(.. | strings) |= gsub(\"(?<![\\\"])[$][{]packageDir[}](?<rest>[^ \\\"]*)\"; \"\\\"\" + \"$\" + \"{packageDir}\" + .rest + \"\\\"\")' \"${file}\" > \"${file}.new\"",
+            "mv \"${file}.new\" \"${file}\""
+          ],
+          "help": {
+            "text": "Quote unquoted ${packageDir} references in a package's .aux4 (workaround for Windows paths)",
+            "variables": [
+              {
+                "name": "file",
+                "text": "The .aux4 file to fix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "link",
+          "execute": [
+            "cp \"package/dist/windows/${arch}/aux4-computer-windows.exe\" package/aux4-computer-windows.exe"
+          ],
+          "help": {
+            "text": "Put the built binary where package/.aux4 runs it from (tests run from package/ without installing)",
+            "variables": [
+              {
+                "name": "arch",
+                "text": "amd64 or arm64",
+                "default": "amd64"
+              }
+            ]
+          }
+        },
+        {
+          "name": "installed-package",
+          "execute": [
+            "curl -fsSL -H \"User-Agent: $(aux4 aux4 version --system)\" -o \"$RUNNER_TEMP/aux4-computer-windows.zip\" \"${hub}/v1/packages/public/aux4/computer-windows/${version}?download=true\"",
+            "unzip -o -q \"$RUNNER_TEMP/aux4-computer-windows.zip\" -d \"$HOME/.aux4.config/packages\"",
+            "ls -la \"$HOME/.aux4.config/packages/aux4/computer-windows\"",
+            "jq -r \".name + \\\" \\\" + .version\" \"$HOME/.aux4.config/packages/aux4/computer-windows/.aux4\"",
+            "echo \"AUX4_AUX4_FILES=$AUX4_AUX4_FILES;$(cygpath -w \"$HOME/.aux4.config/packages/aux4/computer-windows/.aux4\")\" >> \"$GITHUB_ENV\""
+          ],
+          "help": {
+            "text": "Download a published aux4/computer-windows (the Windows zip pkger would install) and load it through AUX4_AUX4_FILES",
+            "variables": [
+              {
+                "name": "version",
+                "text": "The published version"
+              },
+              {
+                "name": "hub",
+                "text": "Hub API",
+                "default": "https://dev.api.hub.aux4.io"
+              }
+            ]
           }
         }
       ]
