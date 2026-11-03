@@ -84,12 +84,14 @@
             "aux4 ci quote-package-dir --file \"$HOME/.aux4.config/packages/aux4/computer/.aux4\"",
             "sed -i 's#e.spawn(\"jest\",\\[#e.spawn(process.execPath,[n.resolve(l,\"node_modules\",\"jest\",\"bin\",\"jest.js\"),#' \"$HOME/.aux4.config/packages/aux4/test/lib/aux4-test.js\"",
             "grep -c \"process.execPath,\\[n.resolve(l\" \"$HOME/.aux4.config/packages/aux4/test/lib/aux4-test.js\"",
-            "ls -la \"$HOME/.aux4.config/packages/aux4/test/engine/node_modules/jest-circus/build/\" | head -5; ls \"$HOME/.aux4.config/packages/aux4/test/engine/node_modules\" | wc -l; node -e \"console.log(require.resolve('jest-circus/runner', {paths: [process.argv[1]]}))\" \"$(cygpath -w \"$HOME/.aux4.config/packages/aux4/test/engine\")\" || true",
+            "npm install --silent --no-save --prefix \"$RUNNER_TEMP/unrs\" \"@unrs/resolver-binding-win32-$(node -p process.arch)-msvc@$(node -p \"require('$(cygpath -m \"$HOME/.aux4.config/packages/aux4/test/engine\")/node_modules/unrs-resolver/package.json').version\")\"",
+            "cp -r \"$RUNNER_TEMP\"/unrs/node_modules/@unrs/resolver-binding-win32-* \"$HOME/.aux4.config/packages/aux4/test/engine/node_modules/@unrs/\"",
+            "ls \"$HOME/.aux4.config/packages/aux4/test/engine/node_modules/@unrs/\"",
             "echo \"AUX4_AUX4_FILES=$(cygpath -w \"$HOME/.aux4.config/packages/aux4/test/.aux4\");$(cygpath -w \"$HOME/.aux4.config/packages/aux4/computer/.aux4\")\" >> \"$GITHUB_ENV\"",
             "jq -r \".name + \\\" \\\" + .version\" \"$HOME/.aux4.config/packages/aux4/test/.aux4\" \"$HOME/.aux4.config/packages/aux4/computer/.aux4\""
           ],
           "help": {
-            "text": "Load aux4/test and aux4/computer on a Windows runner without pkger (it can't install itself on Windows yet): download the hub's Windows zips, quote ${packageDir} in their command lines (aux4 injects it with backslashes), run its bundled jest through node (it spawns `jest` without a shell, which can't start npm's jest.cmd), and export AUX4_AUX4_FILES",
+            "text": "Load aux4/test and aux4/computer on a Windows runner without pkger (it can't install itself on Windows yet): download the hub's Windows zips, quote ${packageDir} in their command lines (aux4 injects it with backslashes), run its bundled jest through node (it spawns `jest` without a shell, which can't start npm's jest.cmd), add the Windows build of jest's native resolver (the zip only has Linux ones), and export AUX4_AUX4_FILES",
             "variables": [
               {
                 "name": "computerHub",
