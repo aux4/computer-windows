@@ -78,6 +78,10 @@ true
 
 ### should open Calculator
 
+```timeout
+60000
+```
+
 ```execute
 aux4 computer open calc --wait 20s > /dev/null && aux4 computer wait --app Calculator --timeout 20s | jq -r .source
 ```
